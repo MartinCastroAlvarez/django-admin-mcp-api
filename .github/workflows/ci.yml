@@ -18,7 +18,7 @@ jobs:
     name: Lint (ruff + black + isort + flake8 + bandit)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -43,7 +43,7 @@ jobs:
     name: pip-audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -68,7 +68,7 @@ jobs:
           - python-version: "3.13"
             django: "6.0"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
