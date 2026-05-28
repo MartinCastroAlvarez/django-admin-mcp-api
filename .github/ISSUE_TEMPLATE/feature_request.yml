@@ -1,0 +1,51 @@
+name: Feature request
+description: Propose a new feature for the MCP adapter.
+title: "[feat] "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening a feature request here, please check whether your
+        ask is about **admin behaviour** (queries, permissions, forms,
+        new endpoints) — those belong in
+        [django-admin-rest-api](https://github.com/MartinCastroAlvarez/django-admin-rest-api/issues).
+        This package is a thin MCP wire adapter; it adds *no* new admin
+        functionality.
+
+        Features that belong here:
+        - New MCP wire-protocol behaviours (new JSON-RPC methods,
+          new transports).
+        - Better input validation, error mapping, or observability.
+        - New per-tool argument schemas.
+        - Better integration with MCP clients (Claude Desktop, etc.).
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How would you like this to work?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: This is about the MCP wire protocol or adapter behaviour, not the underlying admin behaviour.
+          required: true
+        - label: I checked the [project board](https://github.com/users/MartinCastroAlvarez/projects/4) and existing issues to avoid duplicates.
+          required: true
