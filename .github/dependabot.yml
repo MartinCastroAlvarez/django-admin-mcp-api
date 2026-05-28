@@ -1,0 +1,55 @@
+# Dependabot configuration.
+#
+# Bumps are reviewed weekly. We pull django-admin-rest-api into its own
+# group so its updates show up as standalone PRs — the MCP package
+# tracks the upstream API releases on purpose, so we don't want them
+# bundled with other Python deps.
+
+version: 2
+
+updates:
+  # Production + dev Python dependencies (Poetry).
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - python
+    groups:
+      # django-admin-rest-api updates ride alone so the release cadence
+      # against the upstream API is obvious in the PR list.
+      rest-api:
+        patterns:
+          - "django-admin-rest-api"
+      # Everything else is bundled per major-version bracket.
+      python-minor:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "django-admin-rest-api"
+        update-types:
+          - "minor"
+          - "patch"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+
+  # GitHub Actions versions.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: "Etc/UTC"
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: "chore(ci)"
+      include: "scope"
