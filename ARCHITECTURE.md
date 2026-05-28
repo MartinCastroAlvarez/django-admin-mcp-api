@@ -119,21 +119,25 @@ against rest-api instead.
 ## Settings
 
 All consumer-tunable knobs live under one namespace and are read through
-`conf.get`:
+`conf.get`. Every key has a sensible default — overrides are optional.
 
 ```python
+# settings.py
 DJANGO_ADMIN_MCP_API = {
-    "PROTOCOL_VERSION": "2024-11-05",
-    "SERVER_NAME":      "django-admin",
-    "SERVER_VERSION":   None,                 # falls back to package version
-    "ADMIN_SITE":       "django.contrib.admin.site",
-    "ALLOW_ANONYMOUS":  False,                # test-only escape hatch
-    "DISPATCHER_FACTORY": None,               # dotted path; None = built-in
+    "PROTOCOL_VERSION":  "2024-11-05",            # MCP spec version we speak
+    "SERVER_NAME":       "django-admin",          # advertised via initialize
+    "SERVER_VERSION":    None,                    # None -> package __version__
+    "ADMIN_SITE":        "django.contrib.admin.site",
+    "ALLOW_ANONYMOUS":   False,                   # test-only escape hatch
+    "DISPATCHER_FACTORY": None,                   # dotted path; None = built-in
 }
 ```
 
 Defaults live in `conf.DEFAULTS`. Unknown keys raise `KeyError` to catch
-typos in consumer settings at startup.
+typos in consumer settings at startup. See the README's "Configuration"
+section for the per-key explanation table, and the commented block in
+[`examples/quickstart/myproject/settings.py`](examples/quickstart/myproject/settings.py)
+for a copy-paste-ready example.
 
 ## Testing
 
