@@ -1,23 +1,27 @@
 # `scripts/`
 
-Developer scripts. These are *helpers* — none of them are required to
-ship the package. The shipped wheel/sdist do not include this folder.
+> Developer helpers. None of these scripts ship in the wheel or sdist —
+> they exist to make running the lint gate, the dependency audit, and
+> the build pipeline a single command.
 
-| Script           | Purpose                                                       |
-| ---------------- | ------------------------------------------------------------- |
-| `lint.sh`        | Run the full lint gate (ruff, black, isort, flake8, pylint --errors-only, mypy, bandit). |
-| `audit-deps.sh`  | `pip-audit` against the locked dependencies.                   |
-| `build.sh`       | Clean + `poetry build`. Use before a release.                  |
+## In this folder
 
-Run any of them with:
+| Script                       | Runs                                                                  |
+| ---------------------------- | --------------------------------------------------------------------- |
+| [`lint.sh`](lint.sh)         | The full lint gate: ruff (lint + format), black, isort, flake8, pylint `--errors-only`, mypy, bandit. CI runs the same set. |
+| [`audit-deps.sh`](audit-deps.sh) | `pip-audit` against the locked dependencies.                       |
+| [`build.sh`](build.sh)       | Clean + `poetry build`. Use before a release.                          |
+
+## Run it
 
 ```bash
-poetry run bash scripts/<name>.sh
+poetry run bash scripts/lint.sh
+poetry run bash scripts/audit-deps.sh
+poetry run bash scripts/build.sh
 ```
 
-## What does NOT live here
+## What does NOT belong here
 
-- Anything that needs to be importable from the package (it goes in
-  `django_admin_mcp_api/`).
-- Anything project-specific (CI workflows live in `.github/workflows/`).
-- Secrets, tokens, or credentials of any kind.
+- **Importable code.** Anything the package needs lives in [`../django_admin_mcp_api/`](../django_admin_mcp_api/).
+- **CI workflows.** Those live in [`../.github/workflows/`](../.github/workflows/).
+- **Secrets or credentials** of any kind.

@@ -1,26 +1,24 @@
 # `tests/`
 
-Pytest suite. Runs against a minimal Django project in
-[`test_project/`](test_project/) configured with `DJANGO_ADMIN_MCP_API.DISPATCHER_FACTORY`
-pointing at [`tests/helpers.py::make_fake_dispatcher`](helpers.py). That
-lets us assert the exact HTTP shape we would forward to
-`django-admin-rest-api` without needing rest-api itself.
+> The pytest suite — 77 tests, 91% line coverage, including a real
+> end-to-end run against `django-admin-rest-api`.
 
-## Layout
+## In this folder
 
-| File / dir              | Purpose                                                   |
-| ----------------------- | --------------------------------------------------------- |
-| `test_project/`         | A throwaway Django project for the test client.            |
-| `conftest.py`           | Shared fixtures: `staff_client`, `anon_client`, etc.       |
-| `helpers.py`            | `FakeDispatcher` + JSON-RPC body helpers.                  |
-| `test_apps.py`          | App config wiring.                                         |
-| `test_conf.py`          | `conf.get` defaults / overrides / unknown-key errors.      |
-| `test_jsonrpc.py`       | Envelope parsing happy + error paths.                      |
-| `test_manifest.py`      | The tool catalogue + `initialize` shape.                   |
-| `test_dispatch.py`      | `Dispatcher` resolution + `PendingDispatcher` placeholder. |
-| `test_tools.py`         | Per-tool `build_target` translation table.                 |
-| `test_views.py`         | HTTP-level: auth gates, JSON-RPC routing, error mapping.   |
-| `test_security.py`      | Security invariants (no `csrf_exempt`, no `objects.all`, no token strings). |
+| File / dir                               | Purpose                                                   |
+| ---------------------------------------- | --------------------------------------------------------- |
+| [`test_project/`](test_project/)         | A throwaway Django project that the test client drives.    |
+| [`conftest.py`](conftest.py)             | Shared fixtures: `staff_client`, `anon_client`, etc.       |
+| [`helpers.py`](helpers.py)               | `FakeDispatcher` (echo-back) and JSON-RPC body helpers.    |
+| [`test_apps.py`](test_apps.py)           | App config wiring.                                         |
+| [`test_conf.py`](test_conf.py)           | `conf.get` defaults / overrides / unknown-key errors.      |
+| [`test_jsonrpc.py`](test_jsonrpc.py)     | Envelope parsing — happy + error paths.                    |
+| [`test_manifest.py`](test_manifest.py)   | The tool catalogue + `initialize` shape.                   |
+| [`test_dispatch.py`](test_dispatch.py)   | `Dispatcher` resolution + `RestApiDispatcher` defaults.    |
+| [`test_tools.py`](test_tools.py)         | Per-tool `build_target` translation table.                 |
+| [`test_views.py`](test_views.py)         | HTTP-level: auth gates, JSON-RPC routing, error mapping.   |
+| [`test_integration.py`](test_integration.py) | End-to-end through the real rest-api view set.         |
+| [`test_security.py`](test_security.py)   | Security invariants — no `csrf_exempt`, no `objects.all`, no token strings. |
 
 ## Running
 
@@ -31,18 +29,15 @@ poetry run pytest -k tools                  # by keyword
 poetry run pytest --no-cov                  # skip coverage for speed
 ```
 
-Coverage threshold lives in `pyproject.toml` under `[tool.coverage.report]`.
-The suite must pass cleanly on every PR — the CI workflow enforces it.
+The coverage threshold lives in `pyproject.toml`; CI enforces it on every PR.
 
-## Adding a new tool
+## Adding tests for a new tool
 
-1. Add the module in `django_admin_mcp_api/tools/<name>.py`.
-2. Register it in `django_admin_mcp_api/tools/__init__.py::_TOOLS`.
-3. Add a case to `tests/test_tools.py::CASES` describing the exact HTTP
-   shape the tool forwards.
-4. Add the tool to the mapping table in
-   `django_admin_mcp_api/tools/README.md` and the README.md table at
-   the repo root.
-5. Bump the count in `tests/test_views.py::test_tools_list_returns_all_tools`.
+1. Add a case to [`test_tools.py::CASES`](test_tools.py) describing the exact HTTP shape the tool forwards.
+2. Bump the count in [`test_views.py::test_tools_list_returns_all_tools`](test_views.py).
+3. Add an integration assertion in [`test_integration.py`](test_integration.py) if the tool exercises a new rest-api code path.
 
-That is the whole checklist.
+## See also
+
+- [`../django_admin_mcp_api/tools/README.md`](../django_admin_mcp_api/tools/README.md) — tool authoring checklist.
+- [`../docs/api-contract.md`](../docs/api-contract.md) — the wire contract.
