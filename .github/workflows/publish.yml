@@ -14,6 +14,16 @@ on:
   push:
     tags:
       - "v*"
+  # Manual re-trigger lane. Useful when the first attempt failed for a
+  # reason outside the workflow (e.g. the PyPI Trusted Publisher
+  # registration had not been completed yet); finish the PyPI-side
+  # setup, then re-run from the Actions tab without needing to retag.
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Tag to publish (e.g. v1.0.1)"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -39,6 +49,11 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v6
+        with:
+          # When triggered via workflow_dispatch the default ref is
+          # the branch the workflow was launched from. Honour the
+          # input so a manual re-trigger lands on the right tag.
+          ref: ${{ github.event.inputs.ref || github.ref }}
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -110,3 +125,8 @@ jobs:
           # secrets. PyPI's pending publisher must be configured first
           # (see the comment on `permissions.id-token` above).
           print-hash: true
+          # Idempotent: if a prior run (or a manual `poetry publish`)
+          # already shipped this exact version, succeed instead of
+          # failing with PyPI's `400 Filename has already been used`.
+          # Stops re-runs of partially-completed releases from going red.
+          skip-existing: true
