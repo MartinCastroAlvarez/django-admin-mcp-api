@@ -1,0 +1,112 @@
+name: Publish
+
+# Releases follow the pattern in CONTRIBUTING.md:
+#   1. Open a release PR that bumps pyproject.toml + __init__.py + CHANGELOG.
+#   2. Merge it.
+#   3. Tag the merge commit `vX.Y.Z` and push the tag.
+#
+# Pushing a tag matching `v*` is what triggers this workflow. The
+# workflow builds the sdist + wheel, scans the artefacts for any
+# token-shaped string, and publishes to PyPI through the `pypi`
+# environment so the deployment shows up in the GitHub sidebar.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-publish:
+    name: Build + publish to PyPI
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/django-admin-mcp-api/
+    permissions:
+      contents: read
+      # OIDC token used by PyPI Trusted Publishing. The matching
+      # publisher must be registered on PyPI under:
+      #   Project → Manage → Publishing → Add a new pending publisher
+      # with owner=MartinCastroAlvarez, repository=django-admin-mcp-api,
+      # workflow=publish.yml, environment=pypi.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        run: pipx install poetry
+
+      - name: Confirm tag matches pyproject version
+        # Refuse to publish if the tag does not match the version in
+        # pyproject.toml — that catches half-finished releases before
+        # they ship a mismatched wheel.
+        run: |
+          tag="${GITHUB_REF_NAME}"            # e.g. v1.0.1
+          pyver="$(poetry version --short)"   # e.g. 1.0.1
+          if [ "$tag" != "v${pyver}" ]; then
+            echo "::error::Tag ${tag} does not match pyproject version v${pyver}"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Run the test suite one more time
+        run: poetry run pytest -q
+
+      - name: Build
+        run: poetry build
+
+      - name: Scan the built artefacts for token-shaped strings
+        # Defence in depth — pre-commit + the test suite already check
+        # the source tree; this catches anything that gets bundled at
+        # build time from a transitive process.
+        run: |
+          poetry run python - <<'PY'
+          import glob, re, sys, tarfile, zipfile
+          pat = re.compile(
+              rb"(ghp_|gho_|ghs_|github_pat_|aws_secret_access_key|"
+              rb"AKIA[0-9A-Z]{16}|BEGIN (RSA|EC|OPENSSH) PRIVATE)"
+          )
+          hits = []
+          for whl in glob.glob("dist/*.whl"):
+              with zipfile.ZipFile(whl) as z:
+                  for n in z.namelist():
+                      for m in pat.finditer(z.read(n)):
+                          hits.append((n, m.group(0).decode("utf-8", "replace")))
+          for tar in glob.glob("dist/*.tar.gz"):
+              with tarfile.open(tar) as t:
+                  for member in t.getmembers():
+                      if not member.isfile():
+                          continue
+                      f = t.extractfile(member)
+                      if f is None:
+                          continue
+                      for m in pat.finditer(f.read()):
+                          hits.append((member.name, m.group(0).decode("utf-8", "replace")))
+          if hits:
+              for path, hit in hits:
+                  print(f"::error::{path}: {hit}")
+              sys.exit(1)
+          print("Dist artefacts clean — no token-shaped strings.")
+          PY
+
+      - name: Publish to PyPI (Trusted Publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          # The OIDC token from the `id-token: write` permission above
+          # authenticates this upload — no API token needed in repo
+          # secrets. PyPI's pending publisher must be configured first
+          # (see the comment on `permissions.id-token` above).
+          print-hash: true

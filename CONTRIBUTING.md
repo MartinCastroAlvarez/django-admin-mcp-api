@@ -69,6 +69,31 @@ pre-commit install
 After that, every commit runs the same gate CI runs. The hooks are
 authoritative — if one fires, fix the diff, don't `--no-verify`.
 
+## Releases
+
+Releases ship to PyPI through GitHub Actions. The process is:
+
+1. **Bump the version** in a release PR — `pyproject.toml`,
+   `django_admin_mcp_api/__init__.py`, and `CHANGELOG.md`.
+2. **Merge the release PR** to `main`.
+3. **Tag the merge commit** with the matching `vX.Y.Z` and push it:
+
+   ```bash
+   git tag -a v1.2.3 -m "django-admin-mcp-api 1.2.3"
+   git push origin v1.2.3
+   ```
+
+4. **GitHub Actions takes over.** The
+   [`Publish`](.github/workflows/publish.yml) workflow runs the full
+   test suite, builds the sdist + wheel, scans the artefacts for any
+   token-shaped string, and uploads to PyPI via Trusted Publishing
+   (no API token in the repo). The deployment shows up in the repo's
+   **Deployments** sidebar under the `pypi` environment, and the PR
+   merge commit picks up a green "Deployed to pypi" badge.
+
+If the tag does not match `pyproject.toml`'s version the workflow
+fails before publishing — that catches half-finished release PRs.
+
 ## Reporting bugs
 
 [Open an issue](https://github.com/MartinCastroAlvarez/django-admin-mcp-api/issues/new).
