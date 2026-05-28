@@ -75,10 +75,16 @@ jobs:
       - name: Install Poetry
         run: pipx install poetry
       - name: Install dependencies
-        run: poetry install --no-interaction --no-root
-      - name: Pin Django version
-        run: poetry add "django~=${{ matrix.django }}" --no-interaction
-      - name: Install project
         run: poetry install --no-interaction
+      # Swap the Django version via the venv's pip, not `poetry add`.
+      # `poetry add` checks the *project's* declared Python range
+      # (>=3.10) against Django 6.0's runtime requirement (>=3.12) and
+      # refuses, even when the matrix cell is running Python 3.12+. pip
+      # installs into the already-resolved venv without re-checking the
+      # project markers.
+      - name: Pin Django version (${{ matrix.django }})
+        run: poetry run pip install --upgrade "django==${{ matrix.django }}.*"
+      - name: Show resolved Django
+        run: poetry run python -c "import django; print('Django', django.get_version())"
       - name: Run pytest
         run: poetry run pytest -q
