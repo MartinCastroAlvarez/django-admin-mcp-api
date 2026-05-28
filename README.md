@@ -252,7 +252,9 @@ Defaults are deliberately strict and match the rest of the family:
   token-shaped string from reaching the index.
 
 See [SECURITY.md](SECURITY.md) for the full set of invariants and how to
-report a vulnerability.
+report a vulnerability, and [`docs/threat-model.md`](docs/threat-model.md)
+for the MCP-layer threat model (what's in scope here vs. delegated to
+rest-api or the consumer's deployment).
 
 ---
 
