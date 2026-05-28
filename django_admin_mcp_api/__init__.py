@@ -13,7 +13,7 @@ via ``apps.py`` once ``"django_admin_mcp_api"`` is added to
 
 from __future__ import annotations
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 # Default Django app config — consumers add ``"django_admin_mcp_api"`` to
 # INSTALLED_APPS and Django picks this up automatically.

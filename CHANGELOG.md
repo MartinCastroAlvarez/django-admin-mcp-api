@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-05-28
+
+### Changed
+- README rewritten in `django-admin-rest-api`'s visual style — simple
+  `#` H1 + blockquote tagline, six-badge row, three-package family
+  table with emoji-coded rows, and single-emoji section markers
+  throughout.
+- Folder READMEs (`django_admin_mcp_api/`, `server/`, `tools/`,
+  `tests/`, `scripts/`, `docs/`, `examples/`) standardised on the
+  same "tagline → In this folder → What does NOT belong here →
+  See also" pattern.
+- `django-admin-rest-api` lockfile pinned to `1.0.1`.
+- Top-level README now includes a "Configuration" section surfacing
+  the `DJANGO_ADMIN_MCP_API` settings namespace.
+
+### Added
+- `.github/workflows/publish.yml` — auto-publishes to PyPI on `v*`
+  tag push via Trusted Publishing. Records the publish as a
+  deployment under the `pypi` environment so it shows in the GitHub
+  Deployments sidebar.
+- `CONTRIBUTING.md` "Releases" section documenting the tag-and-push
+  flow.
+
+### Removed
+- `.github/README.md` — GitHub was surfacing it on the repo home
+  page in place of the root README.
+- `ALLOW_ANONYMOUS` from every user-facing doc (README, ARCHITECTURE,
+  quickstart settings). The setting is now an internal test-only knob;
+  the security suite scans for it leaking back into docs.
+
 ## [1.0.0] — 2026-05-28
 
 ### Added
