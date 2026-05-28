@@ -265,7 +265,7 @@ report a vulnerability.
 | Default dispatcher                         | ⏳ placeholder until `django-admin-rest-api` is on PyPI |
 | PyPI release                               | ⏳ blocked on `django-admin-rest-api`           |
 
-Tracked in the [GitHub project board](https://github.com/MartinCastroAlvarez/django-admin-mcp/projects).
+Tracked in the [GitHub project board](https://github.com/users/MartinCastroAlvarez/projects/4).
 
 ---
 

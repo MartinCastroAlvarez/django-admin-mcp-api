@@ -13,7 +13,7 @@ Read top to bottom before doing anything else, every session.
 6. The open
    [Issues](https://github.com/MartinCastroAlvarez/django-admin-mcp/issues)
    and the
-   [Project board](https://github.com/MartinCastroAlvarez/django-admin-mcp/projects).
+   [Project board](https://github.com/users/MartinCastroAlvarez/projects/4).
 
 ## 1. Mission summary
 
