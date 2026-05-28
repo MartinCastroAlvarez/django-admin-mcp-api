@@ -7,16 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-05-28
+
 ### Added
 - JSON Schema input validation on every `tools/call`. Arguments are
   checked against the tool's declared `input_schema` (Draft 2020-12)
   *before* forwarding to django-admin-rest-api, so malformed calls
   surface as `INVALID_PARAMS` with the json-pointer path of the
   failing field instead of bubbling up as a generic rest-api 400.
+- `docs/threat-model.md` — MCP-layer threat model (assets, trust
+  boundaries, mitigations, out-of-scope items, review checklist).
+- `docs/api-contract.md` — the full MCP wire contract (JSON-RPC
+  envelope, the three methods, error code vocabulary, semver policy).
+- GitHub issue templates (`bug_report.yml`, `feature_request.yml`,
+  `config.yml`) and a PR template that nudge contributors toward the
+  right venue and the right information.
+- `.github/CODEOWNERS` routing every PR review through the
+  package maintainer with extra protection on the wire layer and the
+  `.github/` folder.
 
 ### Changed
 - CI matrix swaps Django via `pip install` instead of `poetry add`, so
   the Python 3.12+ × Django 6.0 cells now resolve and pass.
+- `Development Status` classifier promoted to `5 - Production/Stable`.
+
+### Notes
+This is the first stable release. The wire contract is now covered by
+the semver policy in `docs/api-contract.md` §7 — any breaking change
+will be a major version bump with a migration paragraph in this file.
 
 ## [0.1.0a0] — 2026-05-28
 

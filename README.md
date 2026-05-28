@@ -197,7 +197,7 @@ $ python smoke.py
   "id": 1,
   "result": {
     "protocolVersion": "2024-11-05",
-    "serverInfo": { "name": "django-admin", "version": "0.1.0a0" },
+    "serverInfo": { "name": "django-admin", "version": "1.0.0" },
     "capabilities": { "tools": { "listChanged": false } }
   }
 }
@@ -262,10 +262,11 @@ rest-api or the consumer's deployment).
 
 | Component                                  | Status                                       |
 | ------------------------------------------ | -------------------------------------------- |
-| MCP wire protocol (initialize, tools/list, tools/call) | ✅ implemented + tested            |
-| 16-tool catalogue                          | ✅ implemented + tested                       |
-| Default dispatcher                         | ⏳ placeholder until `django-admin-rest-api` is on PyPI |
-| PyPI release                               | ⏳ blocked on `django-admin-rest-api`           |
+| MCP wire protocol (initialize, tools/list, tools/call) | ✅ stable, semver-protected (see [`docs/api-contract.md`](docs/api-contract.md) §7) |
+| 16-tool catalogue                          | ✅ stable                                     |
+| `RestApiDispatcher`                        | ✅ default; forwards to `django-admin-rest-api` |
+| JSON Schema input validation               | ✅ enforced on every `tools/call`              |
+| PyPI release                               | ✅ `1.0.0`                                     |
 
 Tracked in the [GitHub project board](https://github.com/users/MartinCastroAlvarez/projects/4).
 

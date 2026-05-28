@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-admin-mcp-api"
-version = "0.1.0a0"
+version = "1.0.0"
 description = "MCP (Model Context Protocol) adapter for django-admin-rest-api. A wire-protocol-only layer that lets agents reach the existing REST API — no new functionality, permissions, or validation."
 authors = ["django-admin-mcp contributors"]
 license = "MIT"
@@ -10,7 +10,7 @@ repository = "https://github.com/MartinCastroAlvarez/django-admin-mcp"
 documentation = "https://github.com/MartinCastroAlvarez/django-admin-mcp#readme"
 keywords = ["django", "admin", "mcp", "model-context-protocol", "ai", "llm"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Web Environment",
     "Framework :: Django",
     "Framework :: Django :: 5.0",
