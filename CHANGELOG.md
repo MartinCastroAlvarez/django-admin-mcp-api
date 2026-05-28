@@ -27,6 +27,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `.github/` folder.
 
 ### Changed
+- **Pinned to `django-admin-rest-api ^1.0.0`** — the upstream REST API
+  shipped its stable 1.0 at the same time, so the MCP adapter now
+  requires the matching major. Users on the `0.1.0a0` alpha must
+  upgrade to rest-api 1.x before installing this release.
 - CI matrix swaps Django via `pip install` instead of `poetry add`, so
   the Python 3.12+ × Django 6.0 cells now resolve and pass.
 - `Development Status` classifier promoted to `5 - Production/Stable`.
