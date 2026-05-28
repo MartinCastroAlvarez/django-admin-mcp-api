@@ -11,7 +11,7 @@ Read top to bottom before doing anything else, every session.
 4. [`SECURITY.md`](SECURITY.md) — non-negotiable security rules.
 5. The folder-level `README.md` for any folder your task touches.
 6. The open
-   [Issues](https://github.com/MartinCastroAlvarez/django-admin-mcp/issues)
+   [Issues](https://github.com/MartinCastroAlvarez/django-admin-mcp-api/issues)
    and the
    [Project board](https://github.com/users/MartinCastroAlvarez/projects/4).
 
@@ -102,7 +102,7 @@ For every change to a tool or view:
 
 - Open a draft PR with what you have. Describe the blocker in the PR
   body.
-- Open a [Discussion](https://github.com/MartinCastroAlvarez/django-admin-mcp/discussions)
+- Open a [Discussion](https://github.com/MartinCastroAlvarez/django-admin-mcp-api/discussions)
   if it's a question that needs a human.
 - Open an Issue if it's a tracked piece of work.
 

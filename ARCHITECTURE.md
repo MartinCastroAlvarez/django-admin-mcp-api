@@ -145,7 +145,7 @@ forward to rest-api without rest-api itself being installed. See
 
 ## Future work
 
-Tracked in the [project board](https://github.com/MartinCastroAlvarez/django-admin-mcp/projects).
+Tracked in the [project board](https://github.com/MartinCastroAlvarez/django-admin-mcp-api/projects).
 Highlights:
 
 - Wire `RestApiDispatcher` once `django-admin-rest-api` is on PyPI.

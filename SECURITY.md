@@ -7,7 +7,7 @@ the question to `django-admin-rest-api`.
 ## Reporting a vulnerability
 
 Open a private security advisory at
-<https://github.com/MartinCastroAlvarez/django-admin-mcp/security/advisories/new>.
+<https://github.com/MartinCastroAlvarez/django-admin-mcp-api/security/advisories/new>.
 Do **not** open a public issue for a suspected vulnerability.
 
 If the issue is in the underlying REST API, report it to

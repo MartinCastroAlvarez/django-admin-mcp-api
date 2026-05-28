@@ -5,9 +5,9 @@ description = "MCP (Model Context Protocol) adapter for django-admin-rest-api. A
 authors = ["django-admin-mcp contributors"]
 license = "MIT"
 readme = "README.md"
-homepage = "https://github.com/MartinCastroAlvarez/django-admin-mcp"
-repository = "https://github.com/MartinCastroAlvarez/django-admin-mcp"
-documentation = "https://github.com/MartinCastroAlvarez/django-admin-mcp#readme"
+homepage = "https://github.com/MartinCastroAlvarez/django-admin-mcp-api"
+repository = "https://github.com/MartinCastroAlvarez/django-admin-mcp-api"
+documentation = "https://github.com/MartinCastroAlvarez/django-admin-mcp-api#readme"
 keywords = ["django", "admin", "mcp", "model-context-protocol", "ai", "llm"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",

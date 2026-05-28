@@ -1,13 +1,13 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security vulnerability
-    url: https://github.com/MartinCastroAlvarez/django-admin-mcp/security/advisories/new
+    url: https://github.com/MartinCastroAlvarez/django-admin-mcp-api/security/advisories/new
     about: "Privately report a security issue. Do NOT use a public issue for vulnerabilities."
   - name: Bug in the underlying REST API
     url: https://github.com/MartinCastroAlvarez/django-admin-rest-api/issues/new
     about: "If the issue reproduces without the MCP wrapper, file it on django-admin-rest-api."
   - name: Question or discussion
-    url: https://github.com/MartinCastroAlvarez/django-admin-mcp/discussions
+    url: https://github.com/MartinCastroAlvarez/django-admin-mcp-api/discussions
     about: "Open-ended questions belong in Discussions, not Issues."
   - name: Roadmap board
     url: https://github.com/users/MartinCastroAlvarez/projects/4

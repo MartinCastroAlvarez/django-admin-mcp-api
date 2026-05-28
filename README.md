@@ -4,7 +4,7 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/django-admin-mcp-api.svg)](https://pypi.org/project/django-admin-mcp-api/)
 [![Django versions](https://img.shields.io/badge/django-5.0%20%7C%205.1%20%7C%205.2%20%7C%206.0-blue.svg)](https://pypi.org/project/django-admin-mcp-api/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![CI](https://github.com/MartinCastroAlvarez/django-admin-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/MartinCastroAlvarez/django-admin-mcp/actions/workflows/ci.yml)
+[![CI](https://github.com/MartinCastroAlvarez/django-admin-mcp-api/actions/workflows/ci.yml/badge.svg)](https://github.com/MartinCastroAlvarez/django-admin-mcp-api/actions/workflows/ci.yml)
 
 > **An MCP (Model Context Protocol) adapter for the Django admin.**
 > Lets AI agents reach every operation of your `ModelAdmin` — list, retrieve,
@@ -27,9 +27,9 @@ admin core. Each one exposes the same surface in a different protocol:
 
 | Repo                                                                                  | Protocol         | PyPI                                                      | Status                |
 | ------------------------------------------------------------------------------------- | ---------------- | --------------------------------------------------------- | --------------------- |
-| [`django-admin-react`](https://github.com/MartinCastroAlvarez/django-admin-react)     | React SPA over HTTP/JSON | [`django-admin-react`](https://pypi.org/project/django-admin-react/)             | Published             |
-| [`django-admin-rest-api`](https://github.com/MartinCastroAlvarez/django-admin-rest-api) | HTTP REST/JSON   | _to be published_                                          | Extraction in progress |
-| **`django-admin-mcp`** (this repo)                                                    | **MCP (JSON-RPC)** | [`django-admin-mcp-api`](https://pypi.org/project/django-admin-mcp-api/)         | Pre-alpha (this is the v0)             |
+| [`django-admin-react`](https://github.com/MartinCastroAlvarez/django-admin-react)         | React SPA over HTTP/JSON | [`django-admin-react`](https://pypi.org/project/django-admin-react/)             | Published          |
+| [`django-admin-rest-api`](https://github.com/MartinCastroAlvarez/django-admin-rest-api)   | HTTP REST/JSON           | [`django-admin-rest-api`](https://pypi.org/project/django-admin-rest-api/)       | Published `1.0.0`  |
+| **`django-admin-mcp-api`** (this repo)                                                     | **MCP (JSON-RPC)**       | [`django-admin-mcp-api`](https://pypi.org/project/django-admin-mcp-api/)         | Published `1.0.0`  |
 
 All three reuse your existing `ModelAdmin` as the **only** source of truth
 for querysets, permissions, forms, and serialization.
@@ -71,7 +71,7 @@ In `settings.py`:
 INSTALLED_APPS = [
     # ...your apps...
     "django.contrib.admin",
-    "django_admin_rest_api",   # the REST layer (mandatory at v0.1+)
+    "django_admin_rest_api",   # the REST layer (mandatory)
     "django_admin_mcp_api",    # the MCP adapter
 ]
 ```
@@ -233,7 +233,7 @@ $ python smoke.py
 The permissions block comes straight from `ModelAdmin.has_*_permission` —
 the MCP layer doesn't decide a thing about authorization. PNG screenshots
 of Claude Desktop driving the same endpoint are tracked in
-[#2](https://github.com/MartinCastroAlvarez/django-admin-mcp/issues/2).
+[#2](https://github.com/MartinCastroAlvarez/django-admin-mcp-api/issues/2).
 
 ---
 

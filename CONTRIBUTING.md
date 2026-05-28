@@ -71,7 +71,7 @@ authoritative — if one fires, fix the diff, don't `--no-verify`.
 
 ## Reporting bugs
 
-[Open an issue](https://github.com/MartinCastroAlvarez/django-admin-mcp/issues/new).
+[Open an issue](https://github.com/MartinCastroAlvarez/django-admin-mcp-api/issues/new).
 For security issues, see [SECURITY.md](SECURITY.md) — use a private
 advisory, not a public issue.
 
