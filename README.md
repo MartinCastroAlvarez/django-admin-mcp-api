@@ -1,110 +1,141 @@
-<h1 align="center">django-admin-mcp-api</h1>
+# django-admin-mcp-api
 
-<p align="center">
-  <strong>The Model Context Protocol adapter for the Django admin.</strong><br/>
-  Let AI agents drive your <code>ModelAdmin</code> — with your existing auth, permissions, and validation.
-</p>
+> An MCP server for the Django admin — **same permissions, same `ModelAdmin`, no new features.**
 
-<p align="center">
-  <a href="https://pypi.org/project/django-admin-mcp-api/"><img alt="PyPI version" src="https://img.shields.io/pypi/v/django-admin-mcp-api.svg?color=2b7"></a>
-  <a href="https://pypi.org/project/django-admin-mcp-api/"><img alt="Python versions" src="https://img.shields.io/pypi/pyversions/django-admin-mcp-api.svg"></a>
-  <img alt="Django 5.0 – 6.0" src="https://img.shields.io/badge/django-5.0%20%E2%80%93%206.0-blue.svg">
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
-  <a href="https://github.com/MartinCastroAlvarez/django-admin-mcp-api/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/MartinCastroAlvarez/django-admin-mcp-api/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://modelcontextprotocol.io"><img alt="MCP 2024-11-05" src="https://img.shields.io/badge/MCP-2024--11--05-orange.svg"></a>
-</p>
+[![PyPI version](https://img.shields.io/pypi/v/django-admin-mcp-api.svg)](https://pypi.org/project/django-admin-mcp-api/)
+[![Python versions](https://img.shields.io/pypi/pyversions/django-admin-mcp-api.svg)](https://pypi.org/project/django-admin-mcp-api/)
+[![Django versions](https://img.shields.io/badge/Django-5.0%20%7C%205.1%20%7C%205.2%20%7C%206.0-44b78b.svg)](https://www.djangoproject.com/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![MCP protocol](https://img.shields.io/badge/MCP-2024--11--05-orange.svg)](https://modelcontextprotocol.io)
+[![Wire contract: stable](https://img.shields.io/badge/wire%20contract-stable-44b78b.svg)](CHANGELOG.md)
+
+`django-admin-mcp-api` lets AI agents — Claude, Cursor, anything that
+speaks the [Model Context Protocol](https://modelcontextprotocol.io) —
+drive your Django admin. Every `ModelAdmin` you've already registered
+on `django.contrib.admin.site` becomes an MCP tool, with the **same**
+permissions, the **same** form validation, and the **same** session
+auth as the HTML admin.
+
+It is the MCP face on top of
+[`django-admin-rest-api`](https://github.com/MartinCastroAlvarez/django-admin-rest-api).
+No parallel permission system. No parallel form layer. No features the
+Django admin doesn't already have.
+
+| Project | Role | PyPI |
+| --- | --- | --- |
+| 🟦 [`django-admin-react`](https://github.com/MartinCastroAlvarez/django-admin-react) | React single-page admin frontend | [`django-admin-react`](https://pypi.org/project/django-admin-react/) |
+| 🟩 [`django-admin-rest-api`](https://github.com/MartinCastroAlvarez/django-admin-rest-api) | JSON REST API over `ModelAdmin` | [`django-admin-rest-api`](https://pypi.org/project/django-admin-rest-api/) |
+| 🟪 **`django-admin-mcp-api`** *(this repo)* | MCP server exposing the same API to LLMs | [`django-admin-mcp-api`](https://pypi.org/project/django-admin-mcp-api/) |
 
 ---
 
-## Install in 30 seconds
+## ✨ The one design principle
+
+**This package adds no new behavior. It is an MCP wire adapter.**
+
+Every one of these is owned by your existing Django setup — not by
+this library:
+
+- 🔐 **Authentication** — Django's session + login. The MCP endpoint
+  enforces the same `is_active` + `is_staff` + `AdminSite.has_permission`
+  gate the HTML admin uses. No tokens, no custom backends, no JWTs.
+- 🛡️ **Authorization** — every tool delegates to the matching
+  `ModelAdmin.has_view_permission` / `has_add_permission` /
+  `has_change_permission` / `has_delete_permission` via
+  django-admin-rest-api. If your admin says no, the tool returns the
+  upstream 403.
+- 📋 **Field validation** — `admin.create` / `admin.update` route the
+  payload through the same `ModelForm` Django would render in the HTML
+  admin, plus a JSON Schema check on the wire so malformed calls fail
+  fast with a json-pointer path of the offending field.
+- ⚙️ **Actions** — `admin.action` runs the same action callables
+  registered on `ModelAdmin.actions`. Your code runs unmodified.
+- 🔎 **Search & filters** — `admin.list` uses
+  `ModelAdmin.get_search_results` and `list_filter`. No parallel
+  implementation.
+- 📜 **Audit log** — writes go through Django's `LogEntry`, surfaced
+  by `admin.history` and `admin.recent_actions`.
+- 🌐 **CSRF & sessions** — Django's middleware. Nothing is
+  `@csrf_exempt`.
+
+If a behavior isn't in the HTML admin, it isn't here. If it is in the
+HTML admin, this library exposes it over MCP.
+
+---
+
+## 🚀 Plug-and-play install
 
 ```bash
 pip install django-admin-mcp-api
 ```
 
+Two changes to your project:
+
 ```python
 # settings.py
-INSTALLED_APPS += [
-    "django_admin_rest_api",
-    "django_admin_mcp_api",
+INSTALLED_APPS = [
+    # ... your existing apps ...
+    "django.contrib.admin",
+    "django_admin_rest_api",         # ← the REST surface (mandatory)
+    "django_admin_mcp_api",          # ← the MCP adapter
 ]
 ```
 
 ```python
 # urls.py
+from django.contrib import admin
+from django.urls import include, path
+
 urlpatterns = [
     path("admin/",  admin.site.urls),
-    path("",        include("django_admin_rest_api.urls")),  # REST
-    path("mcp/",    include("django_admin_mcp_api.urls")),   # MCP
+    path("",        include("django_admin_rest_api.urls")),    # REST
+    path("mcp/",    include("django_admin_mcp_api.urls")),     # MCP
 ]
 ```
 
-Your admin now answers JSON-RPC at `POST /mcp/`. Same session, same CSRF,
-same permissions. Agents can list, retrieve, create, update, destroy,
-run actions, autocomplete, browse history, and more — through one
-endpoint your `ModelAdmin` already controls.
+That's it. Your admin now answers JSON-RPC at `POST /mcp/`, with the
+same session cookie and CSRF token your HTML admin already uses.
 
 ---
 
-## Why use it
-
-- **Plug-and-play.** Three lines in `settings.py`, one `include()` in `urls.py`. Nothing else to configure.
-- **Same admin, new surface.** Reuses your `ModelAdmin` as the only source of truth for permissions, querysets, forms, and serialization. The MCP layer adds **zero** new functionality.
-- **Auth that already works.** Django session + CSRF + `AdminSite.has_permission`. No tokens, no parallel permission system, no surprises.
-- **Schema-validated.** Every `tools/call` is validated against the tool's JSON Schema before it reaches your database. Malformed calls fail fast with a json-pointer path of the offending field.
-- **Stable contract.** Wire shape is semver-protected ([`docs/api-contract.md`](docs/api-contract.md) §7). Backward-compatible additions only until v2.
-- **74 tests, 91% coverage.** Includes end-to-end integration against the real REST API.
-
----
-
-## How it fits
-
-`django-admin-mcp-api` is one of three sibling packages that share the
-same admin core. Pick the protocol that fits your client:
-
-| Package | Protocol | PyPI | When to use it |
-| --- | --- | --- | --- |
-| [`django-admin-react`](https://github.com/MartinCastroAlvarez/django-admin-react) | React SPA over HTTP/JSON | [`django-admin-react`](https://pypi.org/project/django-admin-react/) | A humans-and-mice frontend that replaces the HTML admin. |
-| [`django-admin-rest-api`](https://github.com/MartinCastroAlvarez/django-admin-rest-api) | HTTP REST/JSON | [`django-admin-rest-api`](https://pypi.org/project/django-admin-rest-api/) `1.0.0` | A REST surface for non-Django clients or other UIs. |
-| **`django-admin-mcp-api`** *(this repo)* | **MCP JSON-RPC** | [`django-admin-mcp-api`](https://pypi.org/project/django-admin-mcp-api/) `1.0.0` | **An MCP server for AI agents (Claude, Cursor, custom).** |
-
-All three reuse your existing `ModelAdmin`. No fork, no parallel models, no migrations.
-
----
-
-## The 16 tools
+## 📡 The 16 tools
 
 Each MCP tool is a 1:1 mirror of a `django-admin-rest-api` endpoint —
 that's the whole design.
 
-| MCP tool                | What it does                                                          | rest-api endpoint                                       |
-| ----------------------- | --------------------------------------------------------------------- | ------------------------------------------------------- |
-| `admin.registry`        | List every model the user can see                                     | `GET /api/v1/registry/`                                 |
-| `admin.schema`          | Full admin metadata schema                                            | `GET /api/v1/schema/`                                   |
-| `admin.recent_actions`  | The user's own `LogEntry` feed                                        | `GET /api/v1/recent-actions/`                           |
-| `admin.list`            | A page of list-view results                                           | `GET /api/v1/<app>/<model>/`                            |
-| `admin.retrieve`        | A single object's detail view                                         | `GET /api/v1/<app>/<model>/<pk>/`                       |
-| `admin.add_form`        | Create-page field descriptors                                         | `GET /api/v1/<app>/<model>/add/`                        |
-| `admin.create`          | Create one object                                                     | `POST /api/v1/<app>/<model>/`                           |
-| `admin.update`          | Partial-update one object                                             | `PATCH /api/v1/<app>/<model>/<pk>/`                     |
-| `admin.destroy`         | Delete one object                                                     | `DELETE /api/v1/<app>/<model>/<pk>/`                    |
-| `admin.bulk_update`     | Apply the same patch to many objects                                  | `PATCH /api/v1/<app>/<model>/bulk/`                     |
-| `admin.autocomplete`    | Autocomplete a related model                                          | `GET /api/v1/<app>/<model>/autocomplete/`               |
-| `admin.action`          | Run a `ModelAdmin.actions` action                                     | `POST /api/v1/<app>/<model>/actions/<name>/`            |
-| `admin.history`         | One object's `LogEntry` timeline                                      | `GET /api/v1/<app>/<model>/<pk>/history/`               |
-| `admin.delete_preview`  | Cascade preview before a destroy                                      | `GET /api/v1/<app>/<model>/<pk>/delete-preview/`        |
-| `admin.set_password`    | Set/change a user-like password                                       | `POST /api/v1/<app>/<model>/<pk>/password/`             |
-| `admin.panel`           | A custom panel registered on the `ModelAdmin`                         | `GET /api/v1/<app>/<model>/<pk>/panel/<name>/`          |
+| MCP tool                | What it does                                       | rest-api endpoint                                       |
+| ----------------------- | -------------------------------------------------- | ------------------------------------------------------- |
+| `admin.registry`        | List every model the user can see                  | `GET /api/v1/registry/`                                 |
+| `admin.schema`          | Full admin metadata schema                         | `GET /api/v1/schema/`                                   |
+| `admin.recent_actions`  | The user's own `LogEntry` feed                     | `GET /api/v1/recent-actions/`                           |
+| `admin.list`            | A page of list-view results                        | `GET /api/v1/<app>/<model>/`                            |
+| `admin.retrieve`        | A single object's detail view                      | `GET /api/v1/<app>/<model>/<pk>/`                       |
+| `admin.add_form`        | Create-page field descriptors                      | `GET /api/v1/<app>/<model>/add/`                        |
+| `admin.create`          | Create one object                                  | `POST /api/v1/<app>/<model>/`                           |
+| `admin.update`          | Partial-update one object                          | `PATCH /api/v1/<app>/<model>/<pk>/`                     |
+| `admin.destroy`         | Delete one object                                  | `DELETE /api/v1/<app>/<model>/<pk>/`                    |
+| `admin.bulk_update`     | Apply the same patch to many objects               | `PATCH /api/v1/<app>/<model>/bulk/`                     |
+| `admin.autocomplete`    | Autocomplete a related model                       | `GET /api/v1/<app>/<model>/autocomplete/`               |
+| `admin.action`          | Run a `ModelAdmin.actions` action                  | `POST /api/v1/<app>/<model>/actions/<name>/`            |
+| `admin.history`         | One object's `LogEntry` timeline                   | `GET /api/v1/<app>/<model>/<pk>/history/`               |
+| `admin.delete_preview`  | Cascade preview before a destroy                   | `GET /api/v1/<app>/<model>/<pk>/delete-preview/`        |
+| `admin.set_password`    | Set/change a user-like password                    | `POST /api/v1/<app>/<model>/<pk>/password/`             |
+| `admin.panel`           | A custom panel registered on the `ModelAdmin`      | `GET /api/v1/<app>/<model>/<pk>/panel/<name>/`          |
 
-The wire-format details are in [`docs/api-contract.md`](docs/api-contract.md).
+Two endpoints expose them — both gated by the same auth your admin
+already has:
+
+- `POST /mcp/` — the MCP JSON-RPC 2.0 entry point. Speaks `initialize`,
+  `tools/list`, `tools/call`. Full wire spec in [`docs/api-contract.md`](docs/api-contract.md).
+- `GET /mcp/manifest/` — a read-only catalogue (server info + every
+  tool's name, description, JSON Schema) for humans and dashboards.
 
 ---
 
-## See it run
+## 📸 See it run
 
 Captured against the [`examples/quickstart/`](examples/quickstart/)
-demo — a fresh `pip install`, `runserver`, and `python smoke.py`. No
-mocks. No stubs.
+demo — fresh `pip install`, `runserver`, `python smoke.py`. No mocks.
 
 ```jsonc
 // POST /mcp/  method=initialize
@@ -145,86 +176,96 @@ about authorization. That's the prime directive.
 
 ---
 
-## Configuration
+## ⚙️ Configuration
 
-Every knob is optional. Defaults live in
-[`django_admin_mcp_api/conf.py`](django_admin_mcp_api/conf.py) and are
-read through `conf.get(...)` — never `settings.X` directly — so the
-set of supported keys is one grep away. To override any of them, add a
-`DJANGO_ADMIN_MCP_API` dict to your `settings.py`:
+All settings live under a single optional dict — defaults are sane,
+so most projects need no entry at all.
 
 ```python
-# settings.py
+# settings.py (all keys optional)
 DJANGO_ADMIN_MCP_API = {
+    # MCP protocol version advertised in the `initialize` result.
     "PROTOCOL_VERSION":  "2024-11-05",
-    "SERVER_NAME":       "acme-prod-admin",       # shown in MCP `initialize`
-    "SERVER_VERSION":    None,                    # falls back to pkg __version__
+
+    # The `serverInfo.name` field. Useful per-environment labelling.
+    "SERVER_NAME":       "django-admin",
+
+    # The `serverInfo.version`. None → falls back to the package version.
+    "SERVER_VERSION":    None,
+
+    # Dotted path to the AdminSite the package introspects.
     "ADMIN_SITE":        "django.contrib.admin.site",
-    "ALLOW_ANONYMOUS":   False,                   # test-only — never True in prod
-    "DISPATCHER_FACTORY": None,                   # dotted path; None = built-in
+
+    # Test-only escape hatch. MUST stay False in production.
+    "ALLOW_ANONYMOUS":   False,
+
+    # Dotted path to a zero-arg callable returning a Dispatcher.
+    # None uses the built-in RestApiDispatcher.
+    "DISPATCHER_FACTORY": None,
 }
 ```
 
-| Key                  | Type           | Default                          | Purpose |
-| -------------------- | -------------- | -------------------------------- | ------- |
-| `PROTOCOL_VERSION`   | `str`          | `"2024-11-05"`                   | MCP protocol version advertised by `initialize`. Bump when you've verified the package speaks a newer dialect. |
-| `SERVER_NAME`        | `str`          | `"django-admin"`                 | The `serverInfo.name` returned by `initialize`. Useful per-environment labelling. |
-| `SERVER_VERSION`     | `str \| None`  | `None`                           | The `serverInfo.version`. `None` falls back to the installed `django_admin_mcp_api` version. |
-| `ADMIN_SITE`         | `str` (dotted) | `"django.contrib.admin.site"`    | The `AdminSite` the package introspects. Override if you ship a custom subclass. |
-| `ALLOW_ANONYMOUS`    | `bool`         | `False`                          | **Test-only escape hatch.** When `True`, the staff-only auth gate is skipped. Never set this in production — `SECURITY.md` §2 rule 4 forbids it. |
-| `DISPATCHER_FACTORY` | `str \| None`  | `None`                           | Dotted path to a zero-arg callable returning a `Dispatcher`. `None` uses the built-in `RestApiDispatcher`. Override only when plugging in a custom forwarder (e.g. cross-process MCP). |
-
-A copy-paste-ready commented block lives in
-[`examples/quickstart/myproject/settings.py`](examples/quickstart/myproject/settings.py)
-at the bottom.
+A copy-paste-ready block lives at the bottom of
+[`examples/quickstart/myproject/settings.py`](examples/quickstart/myproject/settings.py).
 
 ---
 
-## What this package will *never* do
+## 🔒 Security
 
-- ❌ Add a new permission system.
-- ❌ Bypass CSRF or session auth.
-- ❌ Add a feature that isn't in `django-admin-rest-api`.
-- ❌ Touch the database or call `user.has_perm()`.
+- The MCP endpoint is **not** a parallel auth surface. It refuses any
+  caller the HTML admin would refuse, with the same gate.
+- Anonymous → `401`. Authenticated but non-staff → `403`. CSRF
+  missing on `POST` → Django's middleware 403.
+- Every `tools/call` is validated against the tool's JSON Schema
+  *before* it reaches the database. Schema violations return
+  `INVALID_PARAMS` with the json-pointer path of the failing field.
+- The dispatcher carries the caller's session / user / cookies / CSRF
+  state to django-admin-rest-api untouched. Per-tool permission is
+  enforced inside rest-api by the relevant `ModelAdmin.has_*_permission`.
+- CSRF is enforced everywhere. No view in this package is
+  `@csrf_exempt` — a pre-commit hook and a test assert this.
+- No token-shaped string is permitted in the repo (gitleaks + a
+  pygrep hook + `tests/test_security.py`).
 
-If a behaviour isn't in `django-admin-rest-api`, it isn't here. Period.
-That rule is enforced by pre-commit hooks **and** the test suite (see
-[`tests/test_security.py`](tests/test_security.py)).
-
----
-
-## Security at a glance
-
-| Default                                            | Status                                          |
-| -------------------------------------------------- | ----------------------------------------------- |
-| Anonymous request → `401`                          | enforced in `server/views.py::_auth_gate`        |
-| Non-staff request → `403`                          | enforced in `server/views.py::_auth_gate`        |
-| CSRF on `POST /mcp/`                                | enforced by Django middleware; no view bypasses |
-| Schema validation on `tools/call`                  | `jsonschema` Draft 2020-12 against each tool     |
-| No `csrf_exempt` / no `objects.all()` / no `user.has_perm` | pygrep pre-commit hooks + test suite     |
-| No token-shaped strings in the repo                | `gitleaks` + pygrep + test suite                  |
-| Bandit, pip-audit, ruff, black, isort, flake8, pylint, mypy | green on every PR via CI                  |
-
-Full set of invariants: [`SECURITY.md`](SECURITY.md). Threat model:
-[`docs/threat-model.md`](docs/threat-model.md). Report a vulnerability
-[privately here](https://github.com/MartinCastroAlvarez/django-admin-mcp-api/security/advisories/new).
+Threat model: [`docs/threat-model.md`](docs/threat-model.md). Report
+a vulnerability privately
+[here](https://github.com/MartinCastroAlvarez/django-admin-mcp-api/security/advisories/new).
 
 ---
 
-## Contribute
+## 🧪 Local development
 
 ```bash
+git clone https://github.com/MartinCastroAlvarez/django-admin-mcp-api
+cd django-admin-mcp-api
 poetry install
 poetry run pytest
 poetry run bash scripts/lint.sh
+poetry run bash scripts/audit-deps.sh
 ```
 
-PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and the agent
-contract in [CLAUDE.md](CLAUDE.md). The roadmap lives on the
-[project board](https://github.com/users/MartinCastroAlvarez/projects/4).
+77 tests, 91% line coverage, including a real end-to-end run through
+`django-admin-rest-api`. CI runs the same suite across Python
+3.10–3.13 × Django 5.0/5.1/5.2/6.0 on every PR.
 
 ---
 
-## License
+## 🤝 Contributing
 
-[MIT](LICENSE) — © 2026 Martín Castro Alvarez and django-admin-mcp contributors.
+Issues, PRs, and the roadmap are on GitHub:
+
+- 📋 [Issues](https://github.com/MartinCastroAlvarez/django-admin-mcp-api/issues)
+- 🗺️ [Project board](https://github.com/users/MartinCastroAlvarez/projects/4)
+- 📖 [`CONTRIBUTING.md`](CONTRIBUTING.md) — house rules
+- 🤖 [`CLAUDE.md`](CLAUDE.md) — agent contract
+
+The lint + security gate is the same set the upstream
+`django-admin-rest-api` and `django-admin-react` repos use:
+**ruff, black, isort, flake8, pylint, mypy, bandit, pip-audit,
+gitleaks.** Every change must pass all of them before merge.
+
+---
+
+## 📜 License
+
+MIT. See [LICENSE](LICENSE).
