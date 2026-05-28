@@ -99,11 +99,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 #     # ``AdminSite`` subclass.
 #     "ADMIN_SITE": "django.contrib.admin.site",
 #
-#     # Test-only escape hatch. MUST stay False in production — flipping
-#     # it lets unauthenticated callers reach the MCP endpoint. The
-#     # security suite scans for production code paths that read it.
-#     "ALLOW_ANONYMOUS": False,
-#
 #     # Dotted path to a zero-arg callable returning a Dispatcher. The
 #     # built-in default forwards to django-admin-rest-api via Django's
 #     # URL resolver, which is what 99% of consumers want. Override only

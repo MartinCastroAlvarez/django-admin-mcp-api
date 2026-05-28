@@ -4,7 +4,7 @@ Every consumer-tunable knob is read through this module, never directly
 from ``django.conf.settings``. That keeps defaults and validation in one
 place and makes the surface easy to enumerate in docs.
 
-All settings live under the ``DJANGO_ADMIN_MCP_API`` namespace:
+Public settings live under the ``DJANGO_ADMIN_MCP_API`` namespace:
 
 .. code-block:: python
 
@@ -12,11 +12,14 @@ All settings live under the ``DJANGO_ADMIN_MCP_API`` namespace:
         "PROTOCOL_VERSION": "2024-11-05",   # MCP spec version we speak
         "SERVER_NAME": "django-admin",     # advertised via initialize
         "ADMIN_SITE": "django.contrib.admin.site",  # dotted path
-        "ALLOW_ANONYMOUS": False,          # MUST stay False in production
     }
 
 Anything not present in the consumer's settings falls back to the
-defaults in :data:`DEFAULTS` below.
+defaults in :data:`DEFAULTS` below. ``ALLOW_ANONYMOUS`` is an
+**internal** test-only knob that is deliberately undocumented in the
+public README and the quickstart example — there is no legitimate
+production use case for setting it, so it is not advertised. Do not
+add it to any user-facing doc.
 """
 
 from __future__ import annotations
@@ -34,6 +37,11 @@ DEFAULTS: dict[str, Any] = {
     "SERVER_NAME": "django-admin",
     "SERVER_VERSION": None,  # falls back to the package __version__
     "ADMIN_SITE": "django.contrib.admin.site",
+    # Internal: must remain undocumented in user-facing docs. The only
+    # caller is the test suite (which flips it via ``override_settings``
+    # to exercise paths that would otherwise need a full Django auth
+    # setup). Setting this to True in production disables the staff
+    # gate — never do that.
     "ALLOW_ANONYMOUS": False,
     # The dotted path to a callable returning a Dispatcher. ``None``
     # means use the built-in default (which raises NotImplementedError

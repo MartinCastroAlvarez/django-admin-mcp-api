@@ -196,9 +196,6 @@ DJANGO_ADMIN_MCP_API = {
     # Dotted path to the AdminSite the package introspects.
     "ADMIN_SITE":        "django.contrib.admin.site",
 
-    # Test-only escape hatch. MUST stay False in production.
-    "ALLOW_ANONYMOUS":   False,
-
     # Dotted path to a zero-arg callable returning a Dispatcher.
     # None uses the built-in RestApiDispatcher.
     "DISPATCHER_FACTORY": None,
