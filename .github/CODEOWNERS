@@ -1,0 +1,21 @@
+# Code owners for django-admin-mcp.
+#
+# Lines later in the file take precedence. The first match wins per-path.
+# Required-reviewer enforcement is configured separately via Branch
+# Protection in the GitHub UI (issue #6).
+
+# Default owner — every PR.
+* @MartinCastroAlvarez
+
+# The wire layer + tool catalogue: protocol-only, review carefully.
+/django_admin_mcp_api/server/ @MartinCastroAlvarez
+/django_admin_mcp_api/tools/  @MartinCastroAlvarez
+
+# Security-impacting files: any change here needs a human in the loop.
+/SECURITY.md                  @MartinCastroAlvarez
+/ARCHITECTURE.md              @MartinCastroAlvarez
+/CLAUDE.md                    @MartinCastroAlvarez
+/LICENSE                      @MartinCastroAlvarez
+/.pre-commit-config.yaml      @MartinCastroAlvarez
+/.github/                     @MartinCastroAlvarez
+/pyproject.toml               @MartinCastroAlvarez
