@@ -128,7 +128,6 @@ DJANGO_ADMIN_MCP_API = {
     "SERVER_NAME":       "django-admin",          # advertised via initialize
     "SERVER_VERSION":    None,                    # None -> package __version__
     "ADMIN_SITE":        "django.contrib.admin.site",
-    "ALLOW_ANONYMOUS":   False,                   # test-only escape hatch
     "DISPATCHER_FACTORY": None,                   # dotted path; None = built-in
 }
 ```

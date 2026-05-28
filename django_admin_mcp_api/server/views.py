@@ -53,10 +53,11 @@ def _auth_gate(request: HttpRequest) -> HttpResponse | None:
     constructing a forward.
     """
     if conf.get("ALLOW_ANONYMOUS"):
-        # Test-only escape hatch. SECURITY.md forbids enabling this in
-        # production; pre-commit hooks fail if a test path leaks into
-        # the package, and the README/SECURITY docs flag it as a
-        # development-only knob.
+        # Internal test-only escape hatch — NOT documented in any
+        # user-facing doc on purpose. The only caller flipping this is
+        # the test suite via ``override_settings``. Setting it True in
+        # production removes the staff gate entirely; SECURITY.md §2
+        # rule 4 forbids it.
         return None
     user = getattr(request, "user", None)
     if user is None or not user.is_authenticated:
