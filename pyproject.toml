@@ -43,6 +43,12 @@ django = ">=5.0,<7.0"
 # Bumps are managed by Dependabot (see .github/dependabot.yml) so we
 # track the upstream release cadence automatically.
 django-admin-rest-api = ">=0.1.0a0"
+# JSON Schema validation runs on every tools/call before forwarding to
+# rest-api. The schemas are tiny (one per tool) so the cost is negligible,
+# and validating up-front lets us surface INVALID_PARAMS with the exact
+# json-pointer path of the failing field instead of a generic rest-api
+# 400. ``jsonschema`` 4.x is the current major series.
+jsonschema = "^4.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.3"

@@ -63,9 +63,11 @@ django_admin_mcp_api/
    each one branch in `_handle_jsonrpc`. Everything else is
    `METHOD_NOT_FOUND`.
 5. **For `tools/call`** — look up the tool by name. If unknown,
-   `METHOD_NOT_FOUND`. Run `tool.build_target(arguments)` to translate
-   into a `DispatchTarget` (method + path + body + query). Argument
-   validation errors surface as `INVALID_PARAMS`.
+   `METHOD_NOT_FOUND`. Validate `arguments` against the tool's
+   declared JSON Schema (`jsonschema.Draft202012Validator`); any
+   violation surfaces as `INVALID_PARAMS` with a json-pointer path of
+   the failing field. Then run `tool.build_target(arguments)` to
+   translate into a `DispatchTarget` (method + path + body + query).
 6. **Forward** — `dispatcher.dispatch(request=…, target=…)` hands the
    forward off to rest-api. The dispatcher carries the original
    authenticated `HttpRequest` so session + CSRF + user identity are

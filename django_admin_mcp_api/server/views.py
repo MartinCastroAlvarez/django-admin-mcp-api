@@ -25,6 +25,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+import jsonschema
 from django.http import HttpRequest
 from django.http import HttpResponse
 from django.http import JsonResponse
@@ -110,6 +111,14 @@ def _handle_tools_call(
     if tool is None:
         return jsonrpc.failure(rpc.id, errors.METHOD_NOT_FOUND, f"Unknown tool {name!r}")
 
+    # Validate the arguments against the tool's declared JSON Schema
+    # *before* we ask the tool to build a DispatchTarget. That lets us
+    # return INVALID_PARAMS with the precise json-pointer path of the
+    # failing field, instead of bubbling up rest-api's generic 400.
+    schema_error = _validate_arguments(arguments, tool.input_schema)
+    if schema_error is not None:
+        return jsonrpc.failure(rpc.id, errors.INVALID_PARAMS, schema_error)
+
     try:
         target = tool.build_target(arguments)
     except KeyError as exc:
@@ -134,6 +143,29 @@ def _handle_tools_call(
             "status": getattr(response, "status_code", 200),
         },
     )
+
+
+def _validate_arguments(arguments: dict[str, Any], schema: dict[str, Any]) -> str | None:
+    """Return ``None`` if ``arguments`` validates against ``schema``.
+
+    Otherwise return a human-readable message that names the field that
+    failed. The message is what we surface in the JSON-RPC ``error.message``
+    body, so it has to be short, deterministic, and not leak server-side
+    detail.
+    """
+    try:
+        jsonschema.validate(
+            instance=arguments,
+            schema=schema,
+            cls=jsonschema.Draft202012Validator,
+        )
+    except jsonschema.ValidationError as exc:
+        # ``absolute_path`` is the deque of keys/indices into ``arguments``
+        # at the point of failure. Render as a json-pointer-ish path so a
+        # caller can locate the field at a glance.
+        path = "/" + "/".join(str(p) for p in exc.absolute_path) if exc.absolute_path else "/"
+        return f"{path}: {exc.message}"
+    return None
 
 
 def _decode_response_body(response: Any) -> Any:
