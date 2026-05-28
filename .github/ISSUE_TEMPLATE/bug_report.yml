@@ -19,7 +19,7 @@ body:
     id: version
     attributes:
       label: django-admin-mcp-api version
-      placeholder: "0.1.0a0"
+      placeholder: "1.0.0"
     validations:
       required: true
 
@@ -27,7 +27,7 @@ body:
     id: rest-api-version
     attributes:
       label: django-admin-rest-api version
-      placeholder: "0.1.0a0"
+      placeholder: "1.0.0"
     validations:
       required: true
 

@@ -75,7 +75,7 @@ If a CVE arrives in any of the rows above, file it on the right repo:
 - Admin behaviour / rest-api → file there.
 - Consumer's middleware → file with that maintainer.
 - This adapter (MCP wire, dispatch, auth gate, validation) → file
-  here via a [private security advisory](https://github.com/MartinCastroAlvarez/django-admin-mcp/security/advisories/new).
+  here via a [private security advisory](https://github.com/MartinCastroAlvarez/django-admin-mcp-api/security/advisories/new).
 
 ## 5. Attacker model
 
