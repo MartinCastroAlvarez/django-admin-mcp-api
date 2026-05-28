@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- JSON Schema input validation on every `tools/call`. Arguments are
+  checked against the tool's declared `input_schema` (Draft 2020-12)
+  *before* forwarding to django-admin-rest-api, so malformed calls
+  surface as `INVALID_PARAMS` with the json-pointer path of the
+  failing field instead of bubbling up as a generic rest-api 400.
+
+### Changed
+- CI matrix swaps Django via `pip install` instead of `poetry add`, so
+  the Python 3.12+ × Django 6.0 cells now resolve and pass.
+
 ## [0.1.0a0] — 2026-05-28
 
 ### Added

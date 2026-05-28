@@ -135,6 +135,81 @@ def test_tools_call_missing_required_arg_is_invalid_params(staff_client):
     assert response.status_code == 400
     body = _decode(response)
     assert body["error"]["code"] == errors.INVALID_PARAMS
+    # Error message names the first missing field (json-schema 'required' check).
+    assert "app_label" in body["error"]["message"]
+
+
+@pytest.mark.django_db
+def test_tools_call_wrong_type_is_invalid_params(staff_client):
+    """A value with the wrong JSON type fails at the schema layer, not rest-api."""
+    response = staff_client.post(
+        MCP,
+        data=jsonrpc_call(
+            "tools/call",
+            {
+                "name": "admin.list",
+                "arguments": {
+                    "app_label": "auth",
+                    "model_name": "user",
+                    "page": "not-an-int",  # schema says integer
+                },
+            },
+        ),
+        content_type="application/json",
+    )
+    assert response.status_code == 400
+    body = _decode(response)
+    assert body["error"]["code"] == errors.INVALID_PARAMS
+    assert "/page" in body["error"]["message"]
+
+
+@pytest.mark.django_db
+def test_tools_call_additional_property_rejected(staff_client):
+    """A tool whose schema is closed (additionalProperties: false) rejects extras.
+
+    admin.retrieve's schema has `additionalProperties: false`, so a stray
+    ``"extra"`` key must be flagged here rather than silently forwarded.
+    """
+    response = staff_client.post(
+        MCP,
+        data=jsonrpc_call(
+            "tools/call",
+            {
+                "name": "admin.retrieve",
+                "arguments": {
+                    "app_label": "auth",
+                    "model_name": "user",
+                    "pk": "1",
+                    "extra": "should-be-rejected",
+                },
+            },
+        ),
+        content_type="application/json",
+    )
+    assert response.status_code == 400
+    body = _decode(response)
+    assert body["error"]["code"] == errors.INVALID_PARAMS
+    assert "extra" in body["error"]["message"]
+
+
+@pytest.mark.django_db
+def test_tools_call_pattern_violation_is_invalid_params(staff_client):
+    """app_label must match ``^[a-z][a-z0-9_]*$`` — uppercase rejected."""
+    response = staff_client.post(
+        MCP,
+        data=jsonrpc_call(
+            "tools/call",
+            {
+                "name": "admin.retrieve",
+                "arguments": {"app_label": "Auth", "model_name": "user", "pk": "1"},
+            },
+        ),
+        content_type="application/json",
+    )
+    assert response.status_code == 400
+    body = _decode(response)
+    assert body["error"]["code"] == errors.INVALID_PARAMS
+    assert "/app_label" in body["error"]["message"]
 
 
 @pytest.mark.django_db
