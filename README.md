@@ -145,6 +145,41 @@ about authorization. That's the prime directive.
 
 ---
 
+## Configuration
+
+Every knob is optional. Defaults live in
+[`django_admin_mcp_api/conf.py`](django_admin_mcp_api/conf.py) and are
+read through `conf.get(...)` — never `settings.X` directly — so the
+set of supported keys is one grep away. To override any of them, add a
+`DJANGO_ADMIN_MCP_API` dict to your `settings.py`:
+
+```python
+# settings.py
+DJANGO_ADMIN_MCP_API = {
+    "PROTOCOL_VERSION":  "2024-11-05",
+    "SERVER_NAME":       "acme-prod-admin",       # shown in MCP `initialize`
+    "SERVER_VERSION":    None,                    # falls back to pkg __version__
+    "ADMIN_SITE":        "django.contrib.admin.site",
+    "ALLOW_ANONYMOUS":   False,                   # test-only — never True in prod
+    "DISPATCHER_FACTORY": None,                   # dotted path; None = built-in
+}
+```
+
+| Key                  | Type           | Default                          | Purpose |
+| -------------------- | -------------- | -------------------------------- | ------- |
+| `PROTOCOL_VERSION`   | `str`          | `"2024-11-05"`                   | MCP protocol version advertised by `initialize`. Bump when you've verified the package speaks a newer dialect. |
+| `SERVER_NAME`        | `str`          | `"django-admin"`                 | The `serverInfo.name` returned by `initialize`. Useful per-environment labelling. |
+| `SERVER_VERSION`     | `str \| None`  | `None`                           | The `serverInfo.version`. `None` falls back to the installed `django_admin_mcp_api` version. |
+| `ADMIN_SITE`         | `str` (dotted) | `"django.contrib.admin.site"`    | The `AdminSite` the package introspects. Override if you ship a custom subclass. |
+| `ALLOW_ANONYMOUS`    | `bool`         | `False`                          | **Test-only escape hatch.** When `True`, the staff-only auth gate is skipped. Never set this in production — `SECURITY.md` §2 rule 4 forbids it. |
+| `DISPATCHER_FACTORY` | `str \| None`  | `None`                           | Dotted path to a zero-arg callable returning a `Dispatcher`. `None` uses the built-in `RestApiDispatcher`. Override only when plugging in a custom forwarder (e.g. cross-process MCP). |
+
+A copy-paste-ready commented block lives in
+[`examples/quickstart/myproject/settings.py`](examples/quickstart/myproject/settings.py)
+at the bottom.
+
+---
+
 ## What this package will *never* do
 
 - ❌ Add a new permission system.
