@@ -8,6 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![MCP protocol](https://img.shields.io/badge/MCP-2024--11--05-orange.svg)](https://modelcontextprotocol.io)
 [![Wire contract: stable](https://img.shields.io/badge/wire%20contract-stable-44b78b.svg)](CHANGELOG.md)
+[![Latest on Django Packages](https://img.shields.io/badge/Django%20Packages-django--admin--mcp--api-8c3c26.svg)](https://djangopackages.org/packages/p/django-admin-mcp-api/)
 
 `django-admin-mcp-api` lets AI agents — Claude, Cursor, anything that
 speaks the [Model Context Protocol](https://modelcontextprotocol.io) —
