@@ -50,6 +50,11 @@ this library:
   fast with a json-pointer path of the offending field.
 - ⚙️ **Actions** — `admin.action` runs the same action callables
   registered on `ModelAdmin.actions`. Your code runs unmodified.
+  Each action's descriptor carries a `target` (`batch` or `detail`),
+  derived by rest-api from the callable's signature: signatures
+  ending in `queryset` are batch (changelist shape), signatures
+  ending in `obj_id`/`pk`/`id` are detail (single-object shape).
+  Agents pass the right number of pks for the action's target.
 - 🔎 **Search & filters** — `admin.list` uses
   `ModelAdmin.get_search_results` and `list_filter`. No parallel
   implementation.
@@ -116,7 +121,7 @@ that's the whole design.
 | `admin.destroy`         | Delete one object                                  | `DELETE /api/v1/<app>/<model>/<pk>/`                    |
 | `admin.bulk_update`     | Apply the same patch to many objects               | `PATCH /api/v1/<app>/<model>/bulk/`                     |
 | `admin.autocomplete`    | Autocomplete a related model                       | `GET /api/v1/<app>/<model>/autocomplete/`               |
-| `admin.action`          | Run a `ModelAdmin.actions` action                  | `POST /api/v1/<app>/<model>/actions/<name>/`            |
+| `admin.action`          | Run a `ModelAdmin.actions` action (batch or detail) | `POST /api/v1/<app>/<model>/actions/<name>/`            |
 | `admin.history`         | One object's `LogEntry` timeline                   | `GET /api/v1/<app>/<model>/<pk>/history/`               |
 | `admin.delete_preview`  | Cascade preview before a destroy                   | `GET /api/v1/<app>/<model>/<pk>/delete-preview/`        |
 | `admin.set_password`    | Set/change a user-like password                    | `POST /api/v1/<app>/<model>/<pk>/password/`             |
@@ -143,7 +148,7 @@ demo — fresh `pip install`, `runserver`, `python smoke.py`. No mocks.
   "jsonrpc": "2.0", "id": 1,
   "result": {
     "protocolVersion": "2024-11-05",
-    "serverInfo":      { "name": "django-admin", "version": "1.0.0" },
+    "serverInfo":      { "name": "django-admin", "version": "1.0.2" },
     "capabilities":    { "tools": { "listChanged": false } }
   }
 }

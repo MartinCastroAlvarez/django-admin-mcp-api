@@ -26,8 +26,18 @@ TOOL = Tool(
     description=(
         "Run one of the model's admin actions (anything registered via "
         "ModelAdmin.actions) against the given pks. The action callable is "
-        "executed by django-admin-rest-api; this layer just forwards. Mirrors "
-        "POST /api/v1/<app_label>/<model_name>/actions/<action_name>/."
+        "executed by django-admin-rest-api; this layer just forwards.\n\n"
+        "Each action carries a `target` of either `batch` or `detail`, derived "
+        "by rest-api from the action callable's signature and surfaced on the "
+        "action descriptor (visible via admin.registry / admin.list / "
+        "admin.retrieve):\n"
+        "  - target=`batch` (the stock Django shape): the action receives the "
+        "    user-narrowed queryset; pass one or more pks.\n"
+        "  - target=`detail`: the action receives a single object id; pass "
+        "    exactly one entry in `pks` or rest-api returns 400.\n\n"
+        "The same wire endpoint serves both shapes; the dispatch happens "
+        "inside rest-api. Mirrors POST /api/v1/<app_label>/<model_name>/"
+        "actions/<action_name>/."
     ),
     input_schema={
         "type": "object",
@@ -43,7 +53,11 @@ TOOL = Tool(
                 "type": "array",
                 "items": {"type": "string"},
                 "minItems": 1,
-                "description": "Primary keys to run the action against.",
+                "description": (
+                    "Primary keys to run the action against. For target=`batch` "
+                    "actions, one or more pks; for target=`detail` actions, "
+                    "exactly one — check the action descriptor first."
+                ),
             },
         },
         "required": ["app_label", "model_name", "action_name", "pks"],

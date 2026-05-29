@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-admin-mcp-api"
-version = "1.0.1"
+version = "1.0.2"
 description = "MCP (Model Context Protocol) adapter for django-admin-rest-api. A wire-protocol-only layer that lets agents reach the existing REST API — no new functionality, permissions, or validation."
 authors = ["django-admin-mcp contributors"]
 license = "MIT"
@@ -42,7 +42,7 @@ django = ">=5.0,<7.0"
 # itself; every MCP tool call is forwarded through rest-api's view set.
 # Bumps are managed by Dependabot (see .github/dependabot.yml) so we
 # track the upstream release cadence automatically.
-django-admin-rest-api = "^1.0.0"
+django-admin-rest-api = "^1.0.6"
 # JSON Schema validation runs on every tools/call before forwarding to
 # rest-api. The schemas are tiny (one per tool) so the cost is negligible,
 # and validating up-front lets us surface INVALID_PARAMS with the exact

@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] — 2026-05-29
+
+### Changed
+- **`django-admin-rest-api` constraint floor raised from `^1.0.0` → `^1.0.6`.**
+  Required to expose the new `target` field on action descriptors
+  (batch vs detail). Fresh installs were already on 1.0.6 via the
+  caret range; this just makes the requirement explicit.
+- **`admin.action` tool description** spells out the new batch/detail
+  dispatch — agents reading `tools/list` (or `admin.registry`) see
+  the `target` field on each action and can decide whether to pass
+  one pk (detail) or many (batch). The wire endpoint is unchanged;
+  rest-api dispatches internally based on the action callable's
+  signature.
+- **`admin.action.pks` schema description** notes the per-target
+  constraint (exactly 1 for detail, ≥1 for batch).
+
+### Notes
+No code change in the dispatch layer. The new `target` field flows
+through every existing tool that surfaces action descriptors
+(`admin.registry`, `admin.list`, `admin.retrieve`) without any
+wrapping — rest-api adds the field; this package forwards it. The
+74 existing tests still pass; agents that already use `admin.action`
+keep working unchanged for batch actions.
+
 ## [1.0.1] — 2026-05-28
 
 ### Changed
