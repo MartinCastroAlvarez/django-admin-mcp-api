@@ -562,14 +562,14 @@ bcrypt = ["bcrypt (>=4.1.1)"]
 
 [[package]]
 name = "django-admin-rest-api"
-version = "1.0.3"
+version = "1.0.5"
 description = "A JSON REST API for the Django admin — same permissions, same ModelAdmin, no new features. Powers django-admin-react and django-admin-mcp."
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 files = [
-    {file = "django_admin_rest_api-1.0.3-py3-none-any.whl", hash = "sha256:f2e253b79aedcbd2c320a05a78615785193b1d7331205db49f3e377a69548ed4"},
-    {file = "django_admin_rest_api-1.0.3.tar.gz", hash = "sha256:d692defa411f38274aaa3252291e16088fc2cad405a06dd48dbc407678831cd0"},
+    {file = "django_admin_rest_api-1.0.5-py3-none-any.whl", hash = "sha256:719556a0ecf99c70ca13671952c7094902b3cf8551ec999beccffb221b5888eb"},
+    {file = "django_admin_rest_api-1.0.5.tar.gz", hash = "sha256:580cd02010c6ea72f534eb621e75c1fce0e731b320a8b4fc062f1f9a070e1da0"},
 ]
 
 [package.dependencies]
@@ -684,14 +684,14 @@ dev = ["Flit (>=3.4)", "pyTest (>=7)", "pyTest-cov (>=7) ; python_version >= \"3
 
 [[package]]
 name = "idna"
-version = "3.16"
+version = "3.17"
 description = "Internationalized Domain Names in Applications (IDNA)"
 optional = false
 python-versions = ">=3.9"
 groups = ["dev"]
 files = [
-    {file = "idna-3.16-py3-none-any.whl", hash = "sha256:cc246e3a3f89580c3a951b5ad298ca4638078b2cdd4f115654332b5c26daded5"},
-    {file = "idna-3.16.tar.gz", hash = "sha256:d7a6da03db833450fca25d2358ac9ff06cd624577a4aea3a596d5c0f77b8e03d"},
+    {file = "idna-3.17-py3-none-any.whl", hash = "sha256:466e48829084efe2548012b855df21540b96f2e20e51bd124c851536556a592c"},
+    {file = "idna-3.17.tar.gz", hash = "sha256:5eb0cb53bc467c12eadcf6de83163ad8527cec9416f44b9b61b19caedad2b87f"},
 ]
 
 [package.extras]
