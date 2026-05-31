@@ -40,7 +40,11 @@ jobs:
       name: pypi
       url: https://pypi.org/project/django-admin-mcp-api/
     permissions:
-      contents: read
+      # ``contents: write`` (not ``read``) — the "Create GitHub
+      # Release" step at the end of this job needs write access.
+      # Job-level permissions REPLACE the top-level block, so the
+      # top-level ``contents: write`` is not enough on its own.
+      contents: write
       # OIDC token used by PyPI Trusted Publishing. The matching
       # publisher must be registered on PyPI under:
       #   Project → Manage → Publishing → Add a new pending publisher
