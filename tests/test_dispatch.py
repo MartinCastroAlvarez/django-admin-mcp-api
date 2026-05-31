@@ -62,6 +62,6 @@ def test_rest_api_dispatcher_does_not_forward_csrf_bypass_flag():
     synthetic = dispatcher._build_synthetic_request(
         outer, DispatchTarget(method="GET", path="/registry/")
     )
-    assert not hasattr(synthetic, "_dont_enforce_csrf_checks"), (
-        "synthetic must not inherit the per-request CSRF bypass flag"
-    )
+    assert not hasattr(
+        synthetic, "_dont_enforce_csrf_checks"
+    ), "synthetic must not inherit the per-request CSRF bypass flag"

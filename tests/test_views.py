@@ -254,9 +254,11 @@ def test_oversized_body_returns_413(staff_client):
     The default limit is 256 KiB; we send 300 KiB of zeroes (which
     parses as one JSON-RPC envelope wrapping a giant string).
     """
-    huge = b'{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"junk":"' + b"x" * (
-        300 * 1024
-    ) + b'"}}'
+    huge = (
+        b'{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"junk":"'
+        + b"x" * (300 * 1024)
+        + b'"}}'
+    )
     response = staff_client.post(MCP, data=huge, content_type="application/json")
     assert response.status_code == 413
     body = _decode(response)
@@ -274,9 +276,7 @@ def test_dispatcher_upstream_exceptions_caught_into_jsonrpc_envelope(staff_clien
 
     from django_admin_mcp_api.server.dispatch import UnknownRestApiPath
 
-    with patch(
-        "django_admin_mcp_api.server.views.get_dispatcher"
-    ) as gd:
+    with patch("django_admin_mcp_api.server.views.get_dispatcher") as gd:
         gd.return_value.dispatch.side_effect = UnknownRestApiPath("/some-path/")
         response = staff_client.post(
             MCP,
