@@ -26,7 +26,7 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write       # required by the "Create GitHub Release" step below
 
 concurrency:
   group: publish-${{ github.ref }}
@@ -130,3 +130,43 @@ jobs:
           # failing with PyPI's `400 Filename has already been used`.
           # Stops re-runs of partially-completed releases from going red.
           skip-existing: true
+
+      # Pull the CHANGELOG section for the tag's version so the GitHub
+      # Release body matches what shipped to PyPI without duplicating
+      # the prose by hand.
+      - name: Extract CHANGELOG section for this tag
+        id: changelog
+        run: |
+          set -euo pipefail
+          ver="${GITHUB_REF_NAME#v}"     # v1.2.3 → 1.2.3
+          python3 - "$ver" <<'PY' > /tmp/release-body.md
+          import re, sys
+          ver = sys.argv[1]
+          text = open("CHANGELOG.md").read()
+          # Capture everything between this version's heading and the next ## heading.
+          pat = rf"^## \[{re.escape(ver)}\][^\n]*\n(.*?)(?=^## \[|\Z)"
+          m = re.search(pat, text, flags=re.M | re.S)
+          body = m.group(1).strip() if m else f"django-admin-mcp-api {ver}"
+          print(body)
+          PY
+          echo "body_file=/tmp/release-body.md" >> "$GITHUB_OUTPUT"
+          # Pre-release if the version carries a PEP 440 suffix (aN/bN/rcN).
+          if echo "$ver" | grep -qE '(a|b|rc)[0-9]+$'; then
+            echo "prerelease=true"  >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body_path: ${{ steps.changelog.outputs.body_file }}
+          prerelease: ${{ steps.changelog.outputs.prerelease == 'true' }}
+          # Attach the same wheel + sdist we just uploaded to PyPI so
+          # someone reading the Release page can grab the artefact
+          # without a PyPI round-trip.
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
