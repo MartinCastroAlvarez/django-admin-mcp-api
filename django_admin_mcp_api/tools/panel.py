@@ -24,8 +24,10 @@ def _build_target(arguments: dict[str, Any]) -> DispatchTarget:
 TOOL = Tool(
     name="admin.panel",
     description=(
-        "Read a custom panel (opt-in via PanelEndpointsMixin in rest-api) for one "
-        "object. 404 unless the admin has registered the named panel. Mirrors "
+        "Read a custom panel for one object. The consumer declares panels "
+        "directly on their ``ModelAdmin`` — ``panels = {'name': 'method_name'}`` "
+        "— no rest-api mixin or subclass is required (rest-api ≥1.0.8). 404 "
+        "if the admin has no panel registered under the given name. Mirrors "
         "GET /api/v1/<app_label>/<model_name>/<pk>/panel/<panel_name>/."
     ),
     input_schema={
