@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-05-31
+
+### Added
+- **Django 4.2 LTS support** ([django-admin-react#622](https://github.com/MartinCastroAlvarez/django-admin-react/issues/622)).
+  The pin is relaxed from `django >=5.0,<7.0` to `django >=4.2,<7.0`;
+  the CI matrix exercises 4.2 alongside 5.0 / 5.1 / 5.2 across Python
+  3.10–3.13 (3.13 excluded for 4.2 conservatively since pip may
+  resolve to a pre-4.2.16 release).
+- **`Framework :: Django :: 4.2`** classifier.
+
+### Changed
+- **`django-admin-rest-api` constraint** `^1.0.11` → `^1.1.0` to pick
+  up the API package's own Django 4.2 support and its
+  `SimpleListFilter` value-shape normalisation. Supersedes the
+  `^1.0.6` → `^1.0.11` bump from 1.0.4 — 1.1.0 is a strict
+  superset.
+
+### Why a minor bump
+New supported environment (Django 4.2 LTS) per SemVer's "additive
+features that broaden compatibility" guideline. No behaviour change
+for consumers already on 5.0+; the MCP package forwards everything
+to `django-admin-rest-api` and adds no Django logic of its own.
+
 ## [1.0.4] — 2026-05-31
 
 ### Changed

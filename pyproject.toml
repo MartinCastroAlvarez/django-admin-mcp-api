@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-admin-mcp-api"
-version = "1.0.4"
+version = "1.1.0"
 description = "MCP (Model Context Protocol) adapter for django-admin-rest-api. A wire-protocol-only layer that lets agents reach the existing REST API — no new functionality, permissions, or validation."
 authors = ["django-admin-mcp contributors"]
 license = "MIT"
@@ -13,6 +13,7 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Web Environment",
     "Framework :: Django",
+    "Framework :: Django :: 4.2",
     "Framework :: Django :: 5.0",
     "Framework :: Django :: 5.1",
     "Framework :: Django :: 5.2",
@@ -35,14 +36,15 @@ include = [
 
 [tool.poetry.dependencies]
 python = "^3.10"
-# Django LTS range — bump upper bound when 7.0 ships and the matrix passes.
-django = ">=5.0,<7.0"
+# Django LTS range (#622). 4.2 LTS → 5.0 → 5.1 → 5.2 LTS → 6.0. Bump
+# the upper bound when 7.0 ships and the matrix passes.
+django = ">=4.2,<7.0"
 # Mandatory runtime dependency. This package is a wire-protocol adapter
 # over django-admin-rest-api and does not implement any admin logic
 # itself; every MCP tool call is forwarded through rest-api's view set.
 # Bumps are managed by Dependabot (see .github/dependabot.yml) so we
 # track the upstream release cadence automatically.
-django-admin-rest-api = "^1.0.11"
+django-admin-rest-api = "^1.1.0"
 # JSON Schema validation runs on every tools/call before forwarding to
 # rest-api. The schemas are tiny (one per tool) so the cost is negligible,
 # and validating up-front lets us surface INVALID_PARAMS with the exact
