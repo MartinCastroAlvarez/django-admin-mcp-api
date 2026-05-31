@@ -49,6 +49,13 @@ DEFAULTS: dict[str, Any] = {
     # defaults to 2.5 MiB and is designed for HTML form uploads, an
     # entirely different threat profile). Closes #46.
     "MAX_REQUEST_BYTES": 256 * 1024,  # 256 KiB
+    # Tool names to omit from the catalogue and refuse in ``tools/call``.
+    # Read-only deployments typically set ``["admin.destroy",
+    # "admin.bulk_update", "admin.set_password"]``. The MCP endpoint
+    # behaves as if those tools do not exist — they don't appear in
+    # ``tools/list``, the read-only manifest, or the GET landing, and
+    # calling them returns METHOD_NOT_FOUND. Closes #41 + #48.
+    "DISABLED_TOOLS": (),
     # The dotted path to a callable returning a Dispatcher. ``None``
     # means use the built-in default (which raises NotImplementedError
     # until django-admin-rest-api is wired — tracked in the integration

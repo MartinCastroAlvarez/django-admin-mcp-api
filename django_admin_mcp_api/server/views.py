@@ -32,7 +32,6 @@ from django.http import HttpResponse
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_GET
-from django.views.decorators.http import require_POST
 from django.views.generic import View
 
 from django_admin_mcp_api import conf
@@ -224,9 +223,85 @@ def _is_error_response(response: Any) -> bool:
     return status >= 400
 
 
-@method_decorator(require_POST, name="dispatch")
+def _landing_html(payload: dict[str, Any]) -> str:
+    """Render the GET / landing as a minimal HTML page.
+
+    No template engine — one f-string. Kept deliberately tiny so the
+    landing isn't a maintenance burden. Browsers hitting ``/mcp/``
+    see a recognisable page; agents getting Accept: application/json
+    get JSON instead (handled by the caller).
+    """
+    name = payload["server"]["name"]
+    version = payload["server"]["version"]
+    protocol = payload["protocolVersion"]
+    count = payload["tools_count"]
+    manifest_url = payload["manifest_url"]
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-Frame-Options" content="DENY">
+<title>{name} — MCP server</title>
+<style>
+  body {{ font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+         max-width: 42rem; margin: 4rem auto; padding: 0 1rem;
+         color: #111; line-height: 1.5; }}
+  h1 {{ font-size: 1.25rem; margin-bottom: 0.25rem; }}
+  .tag {{ color: #666; font-size: 0.9rem; }}
+  dl {{ display: grid; grid-template-columns: 10rem 1fr; gap: 0.25rem 1rem;
+        margin-top: 1.5rem; }}
+  dt {{ font-weight: 600; color: #444; }}
+  dd {{ margin: 0; }}
+  a {{ color: #2563eb; }}
+  code {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+          background: #f4f4f5; padding: 0 0.25rem; border-radius: 3px; }}
+</style>
+</head>
+<body>
+<h1>{name}</h1>
+<div class="tag">MCP server — JSON-RPC entry point at this URL.</div>
+<dl>
+  <dt>Version</dt><dd><code>{version}</code></dd>
+  <dt>Protocol</dt><dd><code>{protocol}</code></dd>
+  <dt>Tools available</dt><dd>{count}</dd>
+  <dt>Catalogue</dt><dd><a href="{manifest_url}">manifest/</a></dd>
+</dl>
+<p>POST a JSON-RPC <code>initialize</code>, <code>tools/list</code>,
+or <code>tools/call</code> envelope to this URL.
+See <code>docs/api-contract.md</code> in the package for the wire spec.</p>
+</body>
+</html>
+"""
+
+
 class McpEndpointView(View):
-    """POST handler for the MCP JSON-RPC endpoint."""
+    """The MCP JSON-RPC endpoint.
+
+    - ``POST /`` runs the JSON-RPC protocol (``initialize``,
+      ``tools/list``, ``tools/call``).
+    - ``GET /`` returns a small landing — JSON for API callers, HTML
+      for browsers — that summarises the server (name, version, tool
+      count) and points at the full manifest. Same staff-only auth
+      gate. Closes #39.
+    """
+
+    http_method_names = ["get", "post"]
+
+    def get(self, request: HttpRequest) -> HttpResponse:
+        gate = _auth_gate(request)
+        if gate is not None:
+            return gate
+        payload = {
+            "server": manifest.server_info(),
+            "protocolVersion": conf.get("PROTOCOL_VERSION"),
+            "tools_count": len(manifest.tools_catalogue()),
+            "manifest_url": request.build_absolute_uri("manifest/"),
+            "endpoint": request.build_absolute_uri(),
+        }
+        accept = request.headers.get("Accept", "")
+        if "text/html" in accept and "application/json" not in accept:
+            return HttpResponse(_landing_html(payload), content_type="text/html; charset=utf-8")
+        return JsonResponse(payload)
 
     def post(self, request: HttpRequest) -> HttpResponse:  # noqa: D401 — Django view name.
         gate = _auth_gate(request)

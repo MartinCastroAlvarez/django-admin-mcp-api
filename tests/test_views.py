@@ -242,9 +242,41 @@ def test_parse_error_on_bad_json(staff_client):
 
 
 @pytest.mark.django_db
-def test_get_method_is_rejected(staff_client):
-    response = staff_client.get(MCP)
-    assert response.status_code == 405
+def test_get_returns_landing_json(staff_client):
+    """Closes #39 — GET / returns a JSON landing summarising the server."""
+    response = staff_client.get(MCP, HTTP_ACCEPT="application/json")
+    assert response.status_code == 200
+    body = _decode(response)
+    assert body["server"]["name"] == "django-admin"
+    assert body["protocolVersion"] == "2024-11-05"
+    assert isinstance(body["tools_count"], int)
+    assert body["manifest_url"].endswith("/manifest/")
+
+
+@pytest.mark.django_db
+def test_get_returns_landing_html_for_browsers(staff_client):
+    """Closes #39 — Accept: text/html returns a small HTML page."""
+    response = staff_client.get(MCP, HTTP_ACCEPT="text/html")
+    assert response.status_code == 200
+    assert response["Content-Type"].startswith("text/html")
+    html = response.content.decode("utf-8")
+    assert "MCP server" in html
+    # frame-busting header inside the HTML — protects against clickjacking
+    # if the consumer doesn't already set X-Frame-Options at the proxy.
+    assert "X-Frame-Options" in html
+    assert "manifest/" in html
+
+
+@pytest.mark.django_db
+def test_get_landing_anonymous_is_401(anon_client):
+    response = anon_client.get(MCP)
+    assert response.status_code == 401
+
+
+@pytest.mark.django_db
+def test_get_landing_non_staff_is_403(regular_client):
+    response = regular_client.get(MCP)
+    assert response.status_code == 403
 
 
 @pytest.mark.django_db

@@ -59,13 +59,41 @@ _TOOLS: tuple[Tool, ...] = (
 
 
 def all_tools() -> tuple[Tool, ...]:
-    """Return the registered MCP tools in stable order."""
+    """Return every registered MCP tool in stable order.
+
+    Does **not** honour ``DJANGO_ADMIN_MCP_API.DISABLED_TOOLS`` — that
+    filtering happens in :func:`enabled_tools` and is what views call.
+    Keep this raw view available for tests and for the system-check
+    framework, which validates the full set.
+    """
     return _TOOLS
 
 
+def enabled_tools() -> tuple[Tool, ...]:
+    """Return registered tools minus the ones suppressed via settings.
+
+    ``DJANGO_ADMIN_MCP_API["DISABLED_TOOLS"]`` is a tuple of MCP tool
+    names (e.g. ``("admin.destroy", "admin.bulk_update")``). Suppressed
+    tools do not appear in the catalogue, do not appear in ``tools/list``
+    or the GET manifest, and ``tools/call`` against them returns
+    METHOD_NOT_FOUND.
+    """
+    # Lazy import to avoid a circular import with conf at package load.
+    from django_admin_mcp_api import conf
+
+    disabled = set(conf.get("DISABLED_TOOLS") or ())
+    if not disabled:
+        return _TOOLS
+    return tuple(tool for tool in _TOOLS if tool.name not in disabled)
+
+
 def by_name(name: str) -> Tool | None:
-    """Look up a tool by its public MCP name. ``None`` if unknown."""
-    for tool in _TOOLS:
+    """Look up a tool by its public MCP name. ``None`` if unknown.
+
+    Respects ``DISABLED_TOOLS`` — disabled tools resolve to ``None`` so
+    callers see them as unknown. Use :func:`all_tools` to bypass.
+    """
+    for tool in enabled_tools():
         if tool.name == name:
             return tool
     return None

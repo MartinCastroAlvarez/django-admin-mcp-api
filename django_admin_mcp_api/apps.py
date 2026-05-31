@@ -21,10 +21,10 @@ class DjangoAdminMcpApiConfig(AppConfig):
     def ready(self) -> None:
         """Validate settings on app startup.
 
-        Kept light to avoid slow Django boot in test suites. Any future
-        signal wiring goes here.
+        Kept light to avoid slow Django boot in test suites. Importing
+        ``checks`` registers the ``django.core.checks`` hooks so
+        ``manage.py check`` and Django's auto-check at runserver boot
+        catch misconfiguration before it bites at first request.
         """
-        # Importing the conf module triggers settings validation via
-        # ``django.core.checks``-friendly accessors. See
-        # ``django_admin_mcp_api.conf`` for the actual checks.
+        from django_admin_mcp_api import checks  # noqa: F401 — registers hooks
         from django_admin_mcp_api import conf  # noqa: F401
