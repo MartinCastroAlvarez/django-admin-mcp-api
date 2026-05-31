@@ -102,6 +102,35 @@ urlpatterns = [
 That's it. Your admin now answers JSON-RPC at `POST /mcp/`, with the
 same session cookie and CSRF token your HTML admin already uses.
 
+### Why two apps?
+
+The MCP layer is a thin wire adapter — it has no admin logic of its
+own and forwards every call to
+[`django-admin-rest-api`](https://github.com/MartinCastroAlvarez/django-admin-rest-api),
+which is where the actual permission checks, querysets, forms, and
+serialization live. That separation lets the REST API ship and
+release on its own cadence, lets the SPA frontend
+([`django-admin-react`](https://github.com/MartinCastroAlvarez/django-admin-react))
+share it, and keeps the MCP package small enough to audit in an
+afternoon.
+
+If you'd rather have one URL `include()` instead of two:
+
+```python
+# urls.py — one-include alternative; rest-api auto-mounted under the same prefix
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("",       include("django_admin_mcp_api.bundle_urls")),
+]
+```
+
+`django_admin_mcp_api.bundle_urls` mounts both apps under the
+consumer's chosen prefix (rest-api at `<prefix>/api/v1/...`, MCP at
+`<prefix>/mcp/`). You still need both apps in `INSTALLED_APPS` —
+that's a Django app-registration concern that can't be hidden inside
+a URL conf, and `manage.py check` will fail with `E001` if you miss
+it.
+
 ---
 
 ## 📡 The 16 tools
