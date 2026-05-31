@@ -250,8 +250,11 @@ value, only the structural fields of the call.
 
 ## `admin.panel`
 
-Read a custom panel (opt-in via `PanelEndpointsMixin` in rest-api)
-for one object. 404 unless the admin has registered the named panel.
+Read a custom panel for one object. The consumer declares panels
+directly on their `ModelAdmin` as `panels = {"name": "method_name"}` —
+no rest-api mixin or subclass is required (rest-api ≥1.0.8; earlier
+versions used `PanelEndpointsMixin`, now a deprecated no-op shim).
+404 unless the admin has registered the named panel.
 
 - **Forwards to**: `GET /api/v1/<app_label>/<model_name>/<pk>/panel/<panel_name>/`
 - **Arguments**: `app_label`, `model_name`, `pk`, `panel_name`.

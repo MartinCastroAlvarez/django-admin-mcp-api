@@ -178,7 +178,7 @@ demo — fresh `pip install`, `runserver`, `python smoke.py`. No mocks.
   "jsonrpc": "2.0", "id": 1,
   "result": {
     "protocolVersion": "2024-11-05",
-    "serverInfo":      { "name": "django-admin", "version": "1.0.2" },
+    "serverInfo":      { "name": "django-admin", "version": "1.0.3" },
     "capabilities":    { "tools": { "listChanged": false } }
   }
 }
@@ -383,7 +383,7 @@ poetry run bash scripts/lint.sh
 poetry run bash scripts/audit-deps.sh
 ```
 
-95 tests, 93% line coverage, including a real end-to-end run through
+96 tests, 93% line coverage, including a real end-to-end run through
 `django-admin-rest-api`. CI runs the same suite across Python
 3.10–3.13 × Django 5.0/5.1/5.2/6.0 on every PR.
 
