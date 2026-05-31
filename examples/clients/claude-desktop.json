@@ -1,0 +1,36 @@
+{
+  "_comment_about_this_file": [
+    "Drop this into your Claude Desktop config under the `mcpServers`",
+    "key. The path Claude Desktop reads varies by platform — on macOS",
+    "it is `~/Library/Application Support/Claude/claude_desktop_config.json`",
+    "and on Windows it is `%APPDATA%/Claude/claude_desktop_config.json`.",
+    "Restart Claude Desktop after editing.",
+    "",
+    "Replace REPLACE_ME placeholders with your deployment's values:",
+    "  * MCP_URL       — the public URL of your POST /mcp/ endpoint",
+    "  * SESSION_VALUE — the value of the Django `sessionid` cookie",
+    "  * CSRF_VALUE    — the value of the Django `csrftoken` cookie",
+    "                    (and pass it back as the X-CSRFToken header)",
+    "",
+    "Claude Desktop currently supports stdio transport; this file shows",
+    "the typical shape for a server that exposes an HTTP MCP endpoint.",
+    "If your Claude Desktop build supports HTTP transport natively, use",
+    "the HTTP block. Otherwise wrap the server with mcp-proxy (or an",
+    "equivalent) so stdio frames are translated to HTTP for you."
+  ],
+  "mcpServers": {
+    "django-admin": {
+      "command": "uvx",
+      "args": [
+        "mcp-proxy",
+        "--http",
+        "REPLACE_ME_MCP_URL",
+        "--header",
+        "Cookie: sessionid=REPLACE_ME_SESSION_VALUE; csrftoken=REPLACE_ME_CSRF_VALUE",
+        "--header",
+        "X-CSRFToken: REPLACE_ME_CSRF_VALUE"
+      ],
+      "env": {}
+    }
+  }
+}
