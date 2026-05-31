@@ -32,8 +32,12 @@ def initialize_result() -> dict[str, Any]:
 
 
 def tools_catalogue() -> list[dict[str, Any]]:
-    """Build the ``tools/list`` result payload."""
-    return [tool.to_manifest_entry() for tool in tools.all_tools()]
+    """Build the ``tools/list`` result payload.
+
+    Honours ``DJANGO_ADMIN_MCP_API.DISABLED_TOOLS`` — suppressed tools
+    do not appear. (Closes #41 + #48.)
+    """
+    return [tool.to_manifest_entry() for tool in tools.enabled_tools()]
 
 
 def manifest() -> dict[str, Any]:
