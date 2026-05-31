@@ -182,6 +182,67 @@ about authorization. That's the prime directive.
 
 ---
 
+## 🤖 How an agent uses `admin.action`
+
+Each registered action on a `ModelAdmin` has one of two shapes — and
+the agent picks the call form by reading the descriptor:
+
+1. **Discover.** Call `admin.registry` or `admin.list`. Each action
+   in the response carries a `target` field:
+   ```jsonc
+   {
+     "name": "deactivate",
+     "label": "Deactivate selected users",
+     "target": "batch"           // or "detail"
+   }
+   ```
+2. **Branch on `target`.**
+   - `target = "batch"` → the action's third parameter is a
+     queryset. Call `admin.action` with **one or more** pks.
+   - `target = "detail"` → the action's third parameter is a single
+     object id. Call `admin.action` with **exactly one** pk.
+
+rest-api inspects the signature at registry time, so you don't need
+to declare the shape — the same `ModelAdmin.actions = [...]` you
+already use works. Passing the wrong number of pks for the target
+returns rest-api's 400 with an explicit "expected 1, got N" message.
+
+```jsonc
+// batch action
+{
+  "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+  "params": {
+    "name": "admin.action",
+    "arguments": {
+      "app_label":   "auth",
+      "model_name":  "user",
+      "action_name": "deactivate",
+      "pks":         ["7", "12", "33"]
+    }
+  }
+}
+
+// detail action — exactly one pk
+{
+  "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+  "params": {
+    "name": "admin.action",
+    "arguments": {
+      "app_label":   "auth",
+      "model_name":  "user",
+      "action_name": "send_password_reset",
+      "pks":         ["7"]
+    }
+  }
+}
+```
+
+See [`docs/tools-reference.md`](docs/tools-reference.md) for the full
+schema, and [`docs/api-contract.md`](docs/api-contract.md) for the
+wire-level error codes.
+
+---
+
 ## ⚙️ Configuration
 
 All settings live under a single optional dict — defaults are sane,
@@ -199,8 +260,20 @@ DJANGO_ADMIN_MCP_API = {
     # The `serverInfo.version`. None → falls back to the package version.
     "SERVER_VERSION":    None,
 
-    # Dotted path to the AdminSite the package introspects.
+    # Dotted path to the AdminSite the package introspects. Override
+    # for custom AdminSite subclasses — see "Custom AdminSite" below.
     "ADMIN_SITE":        "django.contrib.admin.site",
+
+    # Maximum POST body size for /mcp/, in bytes. Default 256 KiB —
+    # well above any realistic JSON-RPC envelope and well below
+    # Django's project-wide DATA_UPLOAD_MAX_MEMORY_SIZE (2.5 MiB)
+    # which targets form uploads.
+    "MAX_REQUEST_BYTES": 256 * 1024,
+
+    # Tools to suppress from the catalogue and refuse in tools/call.
+    # Read-only deployments typically set
+    # ("admin.destroy", "admin.bulk_update", "admin.set_password").
+    "DISABLED_TOOLS":    (),
 
     # Dotted path to a zero-arg callable returning a Dispatcher.
     # None uses the built-in RestApiDispatcher.
@@ -210,6 +283,40 @@ DJANGO_ADMIN_MCP_API = {
 
 A copy-paste-ready block lives at the bottom of
 [`examples/quickstart/myproject/settings.py`](examples/quickstart/myproject/settings.py).
+
+### Custom `AdminSite`
+
+If your project subclasses Django's `AdminSite` (multi-tenant flavours,
+a staff-only admin alongside a partner admin, etc.), point the package
+at the right instance via the `ADMIN_SITE` setting:
+
+```python
+# myproject/admin_sites.py
+from django.contrib.admin import AdminSite
+
+class StaffAdminSite(AdminSite):
+    site_header = "Staff console"
+
+staff_admin = StaffAdminSite(name="staff_admin")
+
+# settings.py
+DJANGO_ADMIN_MCP_API = {
+    "ADMIN_SITE": "myproject.admin_sites.staff_admin",
+}
+```
+
+A single `/mcp/` mount exposes exactly one `AdminSite`. If you need
+two MCP surfaces (one per AdminSite), mount the package twice — once
+under `/staff-mcp/`, once under `/partner-mcp/` — each with the right
+`ADMIN_SITE` pointer.
+
+### `manage.py check` integration
+
+`manage.py check` validates the install at boot. It catches:
+
+- `E001` — `django_admin_rest_api` missing from `INSTALLED_APPS`.
+- `E002` — `ADMIN_SITE` dotted path doesn't resolve.
+- `W001` — `DISABLED_TOOLS` lists names that don't match any tool (typo guard).
 
 ---
 
