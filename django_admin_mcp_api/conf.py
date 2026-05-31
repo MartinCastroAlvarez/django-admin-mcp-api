@@ -43,6 +43,12 @@ DEFAULTS: dict[str, Any] = {
     # setup). Setting this to True in production disables the staff
     # gate — never do that.
     "ALLOW_ANONYMOUS": False,
+    # Maximum request body size for the MCP endpoint, in bytes. A
+    # JSON-RPC envelope rarely exceeds a few KiB — keep this lower
+    # than Django's project-wide ``DATA_UPLOAD_MAX_MEMORY_SIZE`` (which
+    # defaults to 2.5 MiB and is designed for HTML form uploads, an
+    # entirely different threat profile). Closes #46.
+    "MAX_REQUEST_BYTES": 256 * 1024,  # 256 KiB
     # The dotted path to a callable returning a Dispatcher. ``None``
     # means use the built-in default (which raises NotImplementedError
     # until django-admin-rest-api is wired — tracked in the integration

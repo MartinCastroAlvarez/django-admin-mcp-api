@@ -138,8 +138,12 @@ class RestApiDispatcher:
         synthetic.COOKIES = request.COOKIES
         if hasattr(request, "_messages"):
             synthetic._messages = request._messages
-        if hasattr(request, "_dont_enforce_csrf_checks"):
-            synthetic._dont_enforce_csrf_checks = request._dont_enforce_csrf_checks
+        # Deliberately NOT forwarded:
+        #   * ``_dont_enforce_csrf_checks`` — the per-request CSRF
+        #     bypass flag. CSRF was already verified at the outer MCP
+        #     view; the synthetic forward runs in-process and does not
+        #     go through middleware, so copying the flag would only
+        #     carry a future bypass risk. (Closes #44.)
         return synthetic
 
 
