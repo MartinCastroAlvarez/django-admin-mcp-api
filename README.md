@@ -373,6 +373,15 @@ Each is a working template — replace the URL + session/CSRF
 placeholders with your deployment's values and the client can drive
 the admin.
 
+### Headless / scripted clients
+
+For Python scripts, CI jobs, and services that can't drive a
+browser, [`examples/headless-client/`](examples/headless-client/)
+ships a programmatic-login recipe: `bootstrap.py` logs in once and
+writes a cookies file; `call.py` re-uses it for any MCP method call
+(stdlib-only). The same Django session-auth flow your HTML admin
+already uses — just scripted.
+
 ---
 
 ## 🤝 Contributing
