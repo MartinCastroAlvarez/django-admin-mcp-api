@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3] — 2026-05-31
+
+The "ship the audit fixes" release. 16 audit issues triaged and closed
+across six PRs. Two new public settings, one new endpoint shape, one
+new URL conf, two new example directories, two new long-form docs,
+plus an end-to-end Trusted-Publishing pipeline that no longer needs a
+local token to ship a release.
+
+### Added
+- **`MAX_REQUEST_BYTES` setting** (default 256 KiB) — caps `/mcp/`
+  POST envelopes well below Django's project-wide 2.5 MiB form-upload
+  ceiling. Oversized requests return 413 + `INVALID_REQUEST` before
+  the JSON parser runs.
+- **`DISABLED_TOOLS` setting** — tuple of tool names to suppress from
+  `tools/list` and reject in `tools/call`. Read-only deployments
+  typically set `("admin.destroy", "admin.bulk_update", "admin.set_password")`.
+- **`manage.py check` integration.** Three hooks: `E001` (rest-api
+  missing from `INSTALLED_APPS`), `E002` (`ADMIN_SITE` doesn't
+  resolve), `W001` (typo in `DISABLED_TOOLS`).
+- **`GET /mcp/` landing.** Content-negotiated — HTML for browsers,
+  JSON for `Accept: application/json`. Shows server name, version,
+  protocol, tool count, and links to the manifest.
+- **`django_admin_mcp_api.bundle_urls`** — opt-in one-include URL conf
+  that auto-mounts rest-api alongside MCP under the consumer's prefix.
+- **Structured logging at `django_admin_mcp_api.server.views`**
+  (`mcp.auth.*`, `mcp.tools_call`, `mcp.tools_call.upstream_error`).
+  Bodies are never logged — only `{user, tool, status}`.
+- **`docs/tools-reference.md`** — one section per tool with the
+  schema, the forwarded rest-api endpoint, and a worked example.
+- **`docs/deployment.md`** — WSGI / ASGI, TLS, CORS, rate-limit,
+  logging, and health-check recipes.
+- **`examples/clients/`** — drop-in Claude Desktop / Cursor / VS Code
+  MCP config templates.
+- **`examples/headless-client/`** — programmatic-login bootstrap +
+  stdlib-only MCP client for scripts / CI / services.
+- **README "Why two apps?" callout** + the agent recipe for
+  `admin.action` discovery + Custom AdminSite subsection.
+- **Auto-create GitHub Releases on tag push.** `publish.yml` extracts
+  the CHANGELOG entry, marks pre-releases by version suffix, and
+  attaches the wheel + sdist.
+
+### Changed
+- **Security: `_dont_enforce_csrf_checks` flag no longer forwarded**
+  to the synthetic rest-api request. Latent CSRF-bypass risk closed.
+- **Security: `UnknownRestApiPath` and `UnsupportedDispatchMethod`
+  now caught** into JSON-RPC `SERVER_ERROR_UPSTREAM` envelopes instead
+  of bubbling to Django's 500 handler.
+
+### Notes
+First release shipped end-to-end through PyPI Trusted Publishing —
+no `.env` token, no manual `poetry publish`. The Trusted Publisher
+was registered on PyPI for this project; the workflow's OIDC token
+authenticates every future tag push.
+
+Tests: 81 → **96 passing**, 91% → **93% line coverage**.
+
 ## [1.0.2] — 2026-05-29
 
 ### Changed
