@@ -354,9 +354,24 @@ poetry run bash scripts/lint.sh
 poetry run bash scripts/audit-deps.sh
 ```
 
-77 tests, 91% line coverage, including a real end-to-end run through
+95 tests, 93% line coverage, including a real end-to-end run through
 `django-admin-rest-api`. CI runs the same suite across Python
 3.10–3.13 × Django 5.0/5.1/5.2/6.0 on every PR.
+
+---
+
+## 🔌 Use it from your agent
+
+Drop-in config snippets for the major MCP clients live under
+[`examples/clients/`](examples/clients/):
+
+- [`claude-desktop.json`](examples/clients/claude-desktop.json) — Anthropic Claude Desktop
+- [`cursor.json`](examples/clients/cursor.json) — Cursor
+- [`vscode-mcp.json`](examples/clients/vscode-mcp.json) — VS Code MCP extensions
+
+Each is a working template — replace the URL + session/CSRF
+placeholders with your deployment's values and the client can drive
+the admin.
 
 ---
 

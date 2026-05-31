@@ -1,0 +1,21 @@
+{
+  "_comment_about_this_file": [
+    "Drop this into Cursor's MCP server config. Cursor reads it from",
+    "Settings → MCP → 'Add new server'. Replace the REPLACE_ME values",
+    "as described in claude-desktop.json.",
+    "",
+    "Cursor supports HTTP-transport MCP servers natively (versions",
+    "0.42+); for older versions use the mcp-proxy wrapper as in the",
+    "Claude Desktop file."
+  ],
+  "mcpServers": {
+    "django-admin": {
+      "type": "http",
+      "url": "REPLACE_ME_MCP_URL",
+      "headers": {
+        "Cookie": "sessionid=REPLACE_ME_SESSION_VALUE; csrftoken=REPLACE_ME_CSRF_VALUE",
+        "X-CSRFToken": "REPLACE_ME_CSRF_VALUE"
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "_comment_about_this_file": [
+    "Generic shape for VS Code MCP extensions (mcp-vscode, continue-dev,",
+    "and similar). Each extension has its own config path — typically",
+    ".vscode/mcp.json at the repo root or a global settings.json key.",
+    "Check the extension's docs for the canonical location.",
+    "",
+    "Replace REPLACE_ME values as described in claude-desktop.json."
+  ],
+  "servers": {
+    "django-admin": {
+      "transport": "http",
+      "url": "REPLACE_ME_MCP_URL",
+      "headers": {
+        "Cookie": "sessionid=REPLACE_ME_SESSION_VALUE; csrftoken=REPLACE_ME_CSRF_VALUE",
+        "X-CSRFToken": "REPLACE_ME_CSRF_VALUE"
+      }
+    }
+  }
+}
