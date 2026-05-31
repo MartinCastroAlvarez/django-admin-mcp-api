@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4] — 2026-05-31
+
+### Changed
+- **`django-admin-rest-api` constraint floor raised `^1.0.6` → `^1.0.11`.**
+  Pulls in the upstream improvements since 1.0.6: actions runner caps
+  pk-list length, history view redacts a denylist of field names
+  (1.0.7); `PanelEndpointsMixin` deprecated in favour of declaring
+  `panels = {...}` directly on `ModelAdmin` (1.0.8); rest-api's own
+  system checks for settings hygiene (1.0.9); N+1 perf + custom-user-
+  model safety (1.0.11). URL surface is unchanged across the range;
+  the MCP dispatcher forwards to the same paths.
+- **`admin.panel` tool description** updated — no longer mentions
+  `PanelEndpointsMixin`. New copy describes the plain-Django
+  `panels = {"name": "method_name"}` attribute approach; the mixin
+  is now a deprecated no-op shim in rest-api and is kept only as a
+  historical parenthetical so consumers on older rest-api versions
+  recognise the term.
+- **`docs/tools-reference.md` panel section** updated to match.
+
+### Fixed
+- README `serverInfo.version` example bumped 1.0.2 → 1.0.3 to reflect
+  the previous shipped release; test count 95 → 96 to match current.
+
 ## [1.0.3] — 2026-05-31
 
 The "ship the audit fixes" release. 16 audit issues triaged and closed
