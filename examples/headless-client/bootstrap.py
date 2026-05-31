@@ -29,8 +29,7 @@ try:
     import httpx
 except ImportError as exc:  # pragma: no cover — friendly error for the example.
     print(
-        "This example requires httpx. Install with:\n\n"
-        "    pip install httpx\n",
+        "This example requires httpx. Install with:\n\n" "    pip install httpx\n",
         file=sys.stderr,
     )
     raise SystemExit(1) from exc
@@ -63,8 +62,7 @@ def login(base: str, user: str, password: str) -> dict[str, str]:
         # on failure with status 200 and a ``form-errors`` block.
         if post.status_code == 200:
             raise SystemExit(
-                "Login form re-rendered — credentials probably wrong. "
-                "Bootstrap failed."
+                "Login form re-rendered — credentials probably wrong. " "Bootstrap failed."
             )
         session = client.cookies.get("sessionid")
         if not session:
@@ -85,7 +83,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--out",
-        default="/tmp/cookies.json",
+        default="/tmp/cookies.json",  # noqa: S108 — example default; pass --out for real use.
         help="Path to write the cookies file (default /tmp/cookies.json).",
     )
     args = parser.parse_args()

@@ -29,7 +29,7 @@ def call(
     arguments: dict | None = None,
     mcp_path: str = "/mcp/",
 ) -> dict:
-    with open(cookies_path, "r", encoding="utf-8") as f:
+    with open(cookies_path, encoding="utf-8") as f:
         c = json.load(f)
     url = c["base"].rstrip("/") + mcp_path
     params: dict = {}
