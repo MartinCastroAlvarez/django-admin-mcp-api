@@ -10,6 +10,8 @@
 | ------------------------------------------ | -------------------------------------------------------------- |
 | [`threat-model.md`](threat-model.md)       | MCP-layer threat model — assets, trust boundaries, mitigations, what's delegated to rest-api / the consumer, and a review checklist. |
 | [`api-contract.md`](api-contract.md)       | The MCP wire contract — JSON-RPC envelope shapes, the three methods (`initialize` / `tools/list` / `tools/call`), error codes, response envelope, semver stability policy. |
+| [`tools-reference.md`](tools-reference.md) | Human-readable mirror of the 16-tool catalogue — one section per tool, with input shape, forwarded endpoint, and a worked example. |
+| [`deployment.md`](deployment.md)           | Operational guidance for putting the MCP endpoint in front of external traffic — TLS / CORS / rate-limit / logging recipes. |
 
 ## What does NOT belong here
 
