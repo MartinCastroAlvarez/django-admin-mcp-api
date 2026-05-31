@@ -41,3 +41,27 @@ def test_factory_rejects_invalid_dotted_path():
         pytest.raises(ImproperConfiguredDispatcher),
     ):
         get_dispatcher()
+
+
+def test_rest_api_dispatcher_does_not_forward_csrf_bypass_flag():
+    """Regression guard for #44.
+
+    ``_dont_enforce_csrf_checks`` is the per-request CSRF bypass flag.
+    Even if the outer request has it set (e.g. via a test fixture or a
+    misbehaving middleware), the synthetic forward must NOT inherit it
+    — otherwise a future code path that re-checks CSRF in rest-api
+    inherits the bypass.
+    """
+    from django.test import RequestFactory
+
+    outer = RequestFactory().post("/mcp/")
+    outer.user = type("U", (), {"is_authenticated": True, "is_staff": True})()
+    outer._dont_enforce_csrf_checks = True
+
+    dispatcher = RestApiDispatcher()
+    synthetic = dispatcher._build_synthetic_request(
+        outer, DispatchTarget(method="GET", path="/registry/")
+    )
+    assert not hasattr(synthetic, "_dont_enforce_csrf_checks"), (
+        "synthetic must not inherit the per-request CSRF bypass flag"
+    )

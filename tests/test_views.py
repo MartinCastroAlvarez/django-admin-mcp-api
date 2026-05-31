@@ -245,3 +245,77 @@ def test_parse_error_on_bad_json(staff_client):
 def test_get_method_is_rejected(staff_client):
     response = staff_client.get(MCP)
     assert response.status_code == 405
+
+
+@pytest.mark.django_db
+def test_oversized_body_returns_413(staff_client):
+    """Closes #46 — bodies above the MCP envelope limit are rejected.
+
+    The default limit is 256 KiB; we send 300 KiB of zeroes (which
+    parses as one JSON-RPC envelope wrapping a giant string).
+    """
+    huge = b'{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"junk":"' + b"x" * (
+        300 * 1024
+    ) + b'"}}'
+    response = staff_client.post(MCP, data=huge, content_type="application/json")
+    assert response.status_code == 413
+    body = _decode(response)
+    assert body["error"]["code"] == errors.INVALID_REQUEST
+
+
+@pytest.mark.django_db
+def test_dispatcher_upstream_exceptions_caught_into_jsonrpc_envelope(staff_client):
+    """Closes #45 — UnknownRestApiPath / UnsupportedDispatchMethod don't 500.
+
+    A dispatcher that raises any of the documented exception types
+    should surface as a JSON-RPC envelope error, not a Django 500.
+    """
+    from unittest.mock import patch
+
+    from django_admin_mcp_api.server.dispatch import UnknownRestApiPath
+
+    with patch(
+        "django_admin_mcp_api.server.views.get_dispatcher"
+    ) as gd:
+        gd.return_value.dispatch.side_effect = UnknownRestApiPath("/some-path/")
+        response = staff_client.post(
+            MCP,
+            data=jsonrpc_call(
+                "tools/call",
+                {
+                    "name": "admin.retrieve",
+                    "arguments": {"app_label": "auth", "model_name": "user", "pk": "1"},
+                },
+            ),
+            content_type="application/json",
+        )
+    assert response.status_code == 400
+    body = _decode(response)
+    assert body["error"]["code"] == errors.SERVER_ERROR_UPSTREAM
+
+
+@pytest.mark.django_db
+def test_tools_call_emits_structured_log(staff_client, caplog):
+    """Closes #47 — every tools/call emits a structured INFO log."""
+    import logging
+
+    with caplog.at_level(logging.INFO, logger="django_admin_mcp_api.server.views"):
+        response = staff_client.post(
+            MCP,
+            data=jsonrpc_call(
+                "tools/call",
+                {
+                    "name": "admin.retrieve",
+                    "arguments": {"app_label": "auth", "model_name": "user", "pk": "1"},
+                },
+            ),
+            content_type="application/json",
+        )
+    assert response.status_code == 200
+    # exactly one mcp.tools_call record per request
+    records = [r for r in caplog.records if r.message == "mcp.tools_call"]
+    assert len(records) == 1
+    record = records[0]
+    assert getattr(record, "tool", None) == "admin.retrieve"
+    assert getattr(record, "user", None) == "staff"
+    assert getattr(record, "status", None) == 200

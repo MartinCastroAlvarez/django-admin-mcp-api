@@ -23,6 +23,7 @@ permissions beyond the staff gate. All of that is rest-api's job.
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 import jsonschema
@@ -40,7 +41,15 @@ from django_admin_mcp_api.server import errors
 from django_admin_mcp_api.server import jsonrpc
 from django_admin_mcp_api.server import manifest
 from django_admin_mcp_api.server.dispatch import Dispatcher
+from django_admin_mcp_api.server.dispatch import UnknownRestApiPath
+from django_admin_mcp_api.server.dispatch import UnsupportedDispatchMethod
 from django_admin_mcp_api.server.dispatch import get_dispatcher
+
+# One module-level logger; consumers wire it into their log aggregation
+# under the name ``django_admin_mcp_api.server.views``. We never log
+# request bodies (could contain passwords / PII) — only the structural
+# fields ``user``, ``tool``, ``status``, ``error_code``. Closes #47.
+_logger = logging.getLogger(__name__)
 
 
 def _auth_gate(request: HttpRequest) -> HttpResponse | None:
@@ -61,11 +70,16 @@ def _auth_gate(request: HttpRequest) -> HttpResponse | None:
         return None
     user = getattr(request, "user", None)
     if user is None or not user.is_authenticated:
+        _logger.warning("mcp.auth.unauthenticated", extra={"path": request.path})
         return JsonResponse(
             jsonrpc.failure(None, errors.SERVER_ERROR_UNAUTHENTICATED),
             status=401,
         )
     if not getattr(user, "is_staff", False):
+        _logger.warning(
+            "mcp.auth.forbidden",
+            extra={"path": request.path, "user": getattr(user, "username", None)},
+        )
         return JsonResponse(
             jsonrpc.failure(None, errors.SERVER_ERROR_FORBIDDEN),
             status=403,
@@ -133,15 +147,35 @@ def _handle_tools_call(
 
     try:
         response = dispatcher.dispatch(request=request, target=target)
-    except NotImplementedError as exc:
+    except (NotImplementedError, UnknownRestApiPath, UnsupportedDispatchMethod) as exc:
+        # Catch the full set of exception types the dispatcher can
+        # raise. Before #45 only NotImplementedError was caught, so
+        # path/method mismatches escaped to Django's 500 handler.
+        _logger.warning(
+            "mcp.tools_call.upstream_error",
+            extra={
+                "user": getattr(request.user, "username", None),
+                "tool": name,
+                "exc_type": type(exc).__name__,
+            },
+        )
         return jsonrpc.failure(rpc.id, errors.SERVER_ERROR_UPSTREAM, str(exc))
 
+    status_code = getattr(response, "status_code", 200)
+    _logger.info(
+        "mcp.tools_call",
+        extra={
+            "user": getattr(request.user, "username", None),
+            "tool": name,
+            "status": status_code,
+        },
+    )
     return jsonrpc.success(
         rpc.id,
         {
             "content": [{"type": "json", "json": _decode_response_body(response)}],
             "isError": _is_error_response(response),
-            "status": getattr(response, "status_code", 200),
+            "status": status_code,
         },
     )
 
@@ -198,8 +232,31 @@ class McpEndpointView(View):
         gate = _auth_gate(request)
         if gate is not None:
             return gate
+        # Reject oversized envelopes before parsing. A well-formed
+        # JSON-RPC request is kilobytes; Django's
+        # DATA_UPLOAD_MAX_MEMORY_SIZE default of 2.5 MiB is designed
+        # for form uploads, not RPC envelopes. Closes #46.
+        max_bytes = conf.get("MAX_REQUEST_BYTES")
+        body = request.body
+        if max_bytes and len(body) > max_bytes:
+            _logger.warning(
+                "mcp.request.too_large",
+                extra={
+                    "user": getattr(request.user, "username", None),
+                    "size": len(body),
+                    "limit": max_bytes,
+                },
+            )
+            return JsonResponse(
+                jsonrpc.failure(
+                    None,
+                    errors.INVALID_REQUEST,
+                    f"Request body exceeds the {max_bytes}-byte MCP envelope limit.",
+                ),
+                status=413,
+            )
         try:
-            payload = json.loads(request.body.decode("utf-8") or "null")
+            payload = json.loads(body.decode("utf-8") or "null")
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             return JsonResponse(
                 jsonrpc.failure(None, errors.PARSE_ERROR, str(exc)),
