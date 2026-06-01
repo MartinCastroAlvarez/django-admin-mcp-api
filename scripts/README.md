@@ -8,7 +8,7 @@
 
 | Script                       | Runs                                                                  |
 | ---------------------------- | --------------------------------------------------------------------- |
-| [`lint.sh`](lint.sh)         | The full lint gate: ruff (lint + format), black, isort, flake8, pylint `--errors-only`, mypy, bandit. CI runs the same set. |
+| [`lint.sh`](lint.sh)         | The full lint gate: ruff (lint + format + import sorting), mypy `--strict`, bandit. CI runs the same set. |
 | [`audit-deps.sh`](audit-deps.sh) | `pip-audit` against the locked dependencies.                       |
 | [`build.sh`](build.sh)       | Clean + `poetry build`. Use before a release.                          |
 

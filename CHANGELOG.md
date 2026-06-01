@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **`__version__` no longer drifts from the packaged version** (#62).
+  It is now derived from the installed package metadata via
+  `importlib.metadata.version`, so `manifest.server_info()` (and the MCP
+  `initialize` block) always advertise the real release version instead
+  of a hand-maintained string that had fallen to `1.0.4`.
+
+### Changed
+- **Consolidated the Python lint stack on Ruff + mypy + bandit** (#63).
+  Removed Black, standalone isort, flake8, and pylint (their config
+  blocks, dev dependencies, pre-commit hooks, and CI steps). Ruff now
+  owns linting, formatting, and import sorting (`I`); the lockfile,
+  `scripts/lint.sh`, and the docs are updated to match.
+- **Enabled `mypy --strict`** (#64). Fixed the two `no-any-return`
+  errors at the dispatch seam (`server/dispatch.py`) by casting the
+  resolver view callable and the synthetic `RequestFactory` request to
+  their concrete Django types.
+- **Future-proofed the dispatcher except clause** (#67). Dispatcher
+  exceptions now share a `DispatchError` base; the view catches that
+  base so any new dispatcher failure mode maps to `SERVER_ERROR_UPSTREAM`
+  instead of escaping to a Django 500.
+
+### Removed
+- **Deprecated `default_app_config`** from the package `__init__` (#65).
+  It was removed in Django 4.1 and this package supports Django >=4.2,
+  where `apps.py` is auto-discovered.
+- **Inert `# noqa` directives** (`A003`, `D401`) that suppressed rules no
+  configured tool enforces (#68); the explanatory text is kept as plain
+  comments.
+
 ## [1.1.0] — 2026-05-31
 
 ### Added

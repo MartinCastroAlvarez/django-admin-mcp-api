@@ -57,9 +57,10 @@ DEFAULTS: dict[str, Any] = {
     # calling them returns METHOD_NOT_FOUND. Closes #41 + #48.
     "DISABLED_TOOLS": (),
     # The dotted path to a callable returning a Dispatcher. ``None``
-    # means use the built-in default (which raises NotImplementedError
-    # until django-admin-rest-api is wired — tracked in the integration
-    # issue).
+    # means use the built-in default, ``RestApiDispatcher``, which
+    # forwards to django-admin-rest-api (a hard runtime dependency).
+    # Override this to swap in a custom forwarder (tests use it to
+    # record dispatches instead of executing them).
     "DISPATCHER_FACTORY": None,
 }
 

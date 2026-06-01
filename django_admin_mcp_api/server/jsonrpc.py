@@ -41,7 +41,7 @@ class JsonRpcRequest:
 
     method: str
     params: dict[str, Any] = field(default_factory=dict)
-    id: Any = None  # noqa: A003 — JSON-RPC field name; not a builtin shadow here.
+    id: Any = None  # JSON-RPC field name; not a builtin shadow here.
     jsonrpc: str = "2.0"
 
 

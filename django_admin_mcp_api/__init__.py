@@ -13,10 +13,17 @@ via ``apps.py`` once ``"django_admin_mcp_api"`` is added to
 
 from __future__ import annotations
 
-__version__ = "1.0.4"
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
 
-# Default Django app config — consumers add ``"django_admin_mcp_api"`` to
-# INSTALLED_APPS and Django picks this up automatically.
-default_app_config = "django_admin_mcp_api.apps.DjangoAdminMcpApiConfig"
+# Derive the version from the installed package metadata so it can never
+# drift from ``pyproject.toml``. The fallback only applies when the
+# package is run from a source tree that was never installed (e.g. a
+# bare ``PYTHONPATH`` import); a normal ``pip install`` always has
+# metadata. ``manifest.server_info()`` advertises this to MCP clients.
+try:
+    __version__ = _pkg_version("django-admin-mcp-api")
+except PackageNotFoundError:  # pragma: no cover - source-tree fallback
+    __version__ = "0.0.0+unknown"
 
-__all__ = ["__version__", "default_app_config"]
+__all__ = ["__version__"]
