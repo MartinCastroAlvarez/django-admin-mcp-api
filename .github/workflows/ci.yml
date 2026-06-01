@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   lint:
-    name: Lint (ruff + black + isort + flake8 + bandit)
+    name: Lint (ruff + mypy + bandit)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -30,12 +30,10 @@ jobs:
         run: poetry install --no-interaction
       - name: ruff check
         run: poetry run ruff check django_admin_mcp_api tests
-      - name: black --check
-        run: poetry run black --check django_admin_mcp_api tests
-      - name: isort --check
-        run: poetry run isort --check-only django_admin_mcp_api tests
-      - name: flake8
-        run: poetry run flake8 django_admin_mcp_api tests
+      - name: ruff format --check
+        run: poetry run ruff format --check django_admin_mcp_api tests
+      - name: mypy
+        run: poetry run mypy django_admin_mcp_api
       - name: bandit
         run: poetry run bandit -c pyproject.toml -q -r django_admin_mcp_api
 

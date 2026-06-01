@@ -422,10 +422,9 @@ Issues, PRs, and the roadmap are on GitHub:
 - 📖 [`CONTRIBUTING.md`](CONTRIBUTING.md) — house rules
 - 🤖 [`CLAUDE.md`](CLAUDE.md) — agent contract
 
-The lint + security gate is the same set the upstream
-`django-admin-rest-api` and `django-admin-react` repos use:
-**ruff, black, isort, flake8, pylint, mypy, bandit, pip-audit,
-gitleaks.** Every change must pass all of them before merge.
+The lint + security gate is **ruff (check + format + import sorting),
+mypy `--strict`, bandit, pip-audit, gitleaks.** Every change must pass
+all of them before merge.
 
 ---
 

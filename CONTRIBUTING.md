@@ -9,7 +9,7 @@ fast.
 ```bash
 poetry install
 poetry run pytest                    # full test suite
-poetry run bash scripts/lint.sh      # ruff + black + isort + flake8 + pylint + mypy + bandit
+poetry run bash scripts/lint.sh      # ruff (check + format) + mypy + bandit
 poetry run pip-audit                 # dependency audit
 ```
 
