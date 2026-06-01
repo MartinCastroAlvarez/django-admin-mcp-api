@@ -63,6 +63,61 @@ def test_schema_tool_reaches_rest_api(staff_client):
 
 
 @pytest.mark.django_db
+def test_form_spec_tool_reaches_rest_api(superuser_client):
+    """admin.form_spec → rest-api FormSpecView (#70).
+
+    Confirms the wire bridges through to the 1.4.0 form-spec endpoint and
+    the byte-identical payload comes back: the add-view form for
+    ``auth.group`` carries ``renderer == "form-spec"`` and a ``name``
+    field whose resolved widget exposes the closed ``kind`` enum.
+    """
+    with _REAL_DISPATCHER:
+        response = superuser_client.post(
+            MCP,
+            data=jsonrpc_call(
+                "tools/call",
+                {
+                    "name": "admin.form_spec",
+                    "arguments": {"app_label": "auth", "model_name": "group"},
+                },
+            ),
+            content_type="application/json",
+        )
+    assert response.status_code == 200, response.content
+    content = _decode(response)["result"]["content"][0]["json"]
+    assert content["renderer"] == "form-spec"
+    assert "kind" in content["fields"]["name"]["widget"]
+
+
+@pytest.mark.django_db
+def test_form_submit_tool_surfaces_validation_errors(superuser_client):
+    """admin.form_submit → rest-api create, re-running is_valid() (#70).
+
+    Creating an ``auth.group`` with no name fails validation; the per-field
+    error is surfaced under ``fields[name]`` exactly as the SPA / legacy
+    admin would see it.
+    """
+    with _REAL_DISPATCHER:
+        response = superuser_client.post(
+            MCP,
+            data=jsonrpc_call(
+                "tools/call",
+                {
+                    "name": "admin.form_submit",
+                    "arguments": {"app_label": "auth", "model_name": "group", "data": {}},
+                },
+            ),
+            content_type="application/json",
+        )
+    assert response.status_code == 200, response.content
+    result = _decode(response)["result"]
+    assert result["isError"] is True
+    assert result["status"] == 400
+    # rest-api's create error envelope nests per-field errors under error.fields.
+    assert "name" in result["content"][0]["json"]["error"]["fields"]
+
+
+@pytest.mark.django_db
 def test_unknown_app_tool_returns_isError(staff_client):
     """A tool call for a model that doesn't exist surfaces rest-api's 404.
 
