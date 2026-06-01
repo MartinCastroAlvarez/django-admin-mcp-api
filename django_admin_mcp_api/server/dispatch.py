@@ -33,6 +33,7 @@ from dataclasses import dataclass
 from importlib import import_module
 from typing import Any
 from typing import Protocol
+from typing import cast
 from typing import runtime_checkable
 from urllib.parse import urlencode
 
@@ -105,7 +106,11 @@ class RestApiDispatcher:
             match = resolve(target.path, urlconf=self.URLCONF)
         except Resolver404 as exc:
             raise UnknownRestApiPath(target.path) from exc
-        return match.func(synthetic, *match.args, **match.kwargs)
+        # ``match.func`` is the resolver's view callable, typed ``Any`` by
+        # Django. rest-api views return an ``HttpResponseBase``; cast so
+        # the seam's return type is honest under ``mypy --strict``.
+        response = match.func(synthetic, *match.args, **match.kwargs)
+        return cast(HttpResponseBase, response)
 
     def _build_synthetic_request(
         self,
@@ -127,7 +132,11 @@ class RestApiDispatcher:
             kwargs["data"] = json.dumps(target.body)
             kwargs["content_type"] = "application/json"
 
-        synthetic = builder(path, **kwargs)
+        # ``builder`` is a dynamically-resolved ``RequestFactory`` method
+        # (typed ``Any`` after the ``getattr``); it returns a synthetic
+        # ``HttpRequest``. Cast so the builder's return type is explicit
+        # under ``mypy --strict``.
+        synthetic = cast(HttpRequest, builder(path, **kwargs))
 
         # Carry over auth-bearing attributes so rest-api sees the same
         # caller that the MCP endpoint saw. We do not mutate the
@@ -137,7 +146,11 @@ class RestApiDispatcher:
             synthetic.session = request.session
         synthetic.COOKIES = request.COOKIES
         if hasattr(request, "_messages"):
-            synthetic._messages = request._messages
+            # ``_messages`` is Django's private messages backend, absent
+            # from the type stubs. Copy it so rest-api's views can emit
+            # admin messages exactly as the outer request would. The
+            # ``type: ignore`` flags this as the one private-API touch.
+            synthetic._messages = request._messages  # type: ignore[attr-defined]
         # Deliberately NOT forwarded:
         #   * ``_dont_enforce_csrf_checks`` — the per-request CSRF
         #     bypass flag. CSRF was already verified at the outer MCP
@@ -150,10 +163,10 @@ class RestApiDispatcher:
 class PendingDispatcher:
     """Fallback used when the consumer has not installed rest-api.
 
-    Every call raises :class:`NotImplementedError` with a pointer to the
-    rest-api install step. The :func:`get_dispatcher` factory only
+    Every call raises :class:`DispatcherNotInstalled` with a pointer to
+    the rest-api install step. The :func:`get_dispatcher` factory only
     falls back to this if importing rest-api fails, so a normal install
-    never sees it.
+    never sees it — :class:`RestApiDispatcher` is the live default.
     """
 
     REASON = (
@@ -169,10 +182,20 @@ class PendingDispatcher:
         target: DispatchTarget,
     ) -> HttpResponseBase:
         del request, target
-        raise NotImplementedError(self.REASON)
+        raise DispatcherNotInstalled(self.REASON)
 
 
-class UnknownRestApiPath(Exception):
+class DispatchError(Exception):
+    """Base class for every error the dispatch seam can raise.
+
+    The view layer catches :class:`DispatchError` and maps it to a
+    JSON-RPC ``SERVER_ERROR_UPSTREAM`` envelope rather than letting it
+    escape to Django's 500 handler. Any new dispatcher failure mode
+    should subclass this so the catch stays future-proof (see #67).
+    """
+
+
+class UnknownRestApiPath(DispatchError):
     """Raised when a tool's path does not resolve against rest-api's URL conf."""
 
     def __init__(self, path: str) -> None:
@@ -180,12 +203,22 @@ class UnknownRestApiPath(Exception):
         self.path = path
 
 
-class UnsupportedDispatchMethod(Exception):
+class UnsupportedDispatchMethod(DispatchError):
     """Raised when the target HTTP method is not supported by RequestFactory."""
 
     def __init__(self, method: str) -> None:
         super().__init__(f"Unsupported HTTP method {method!r}")
         self.method = method
+
+
+class DispatcherNotInstalled(DispatchError, NotImplementedError):
+    """Raised by :class:`PendingDispatcher` when rest-api is not installed.
+
+    Subclasses both :class:`DispatchError` (so the view's upstream-error
+    catch handles it) and :class:`NotImplementedError` (preserving the
+    historical contract that the unconfigured dispatcher raises
+    ``NotImplementedError``).
+    """
 
 
 class ImproperConfiguredDispatcher(Exception):
@@ -200,10 +233,11 @@ def get_dispatcher() -> Dispatcher:
     1. ``DJANGO_ADMIN_MCP_API["DISPATCHER_FACTORY"]`` — dotted path to
        a zero-arg callable. Used by tests and by consumers who want to
        swap in their own forwarder.
-    2. The built-in :class:`RestApiDispatcher`, provided
-       ``django_admin_rest_api`` is importable.
+    2. The built-in :class:`RestApiDispatcher` — the live default,
+       provided ``django_admin_rest_api`` is importable (it is a hard
+       runtime dependency, so a normal install always reaches here).
     3. :class:`PendingDispatcher` — only reached if rest-api is not
-       installed; every call raises :class:`NotImplementedError`.
+       installed; every call raises :class:`DispatcherNotInstalled`.
     """
     dotted = conf.get("DISPATCHER_FACTORY")
     if dotted:

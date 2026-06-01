@@ -10,9 +10,10 @@ Two views:
 
 Both views are intentionally tiny. They do exactly three things:
 
-1. Apply the auth gate (delegated to django-admin-rest-api once it
-   ships; until then, ``staff_required_or_403`` here is the minimum
-   placeholder so the gate exists from day one).
+1. Apply the auth gate. The authoritative per-tool permission check
+   is django-admin-rest-api's (it owns permissions); the
+   :func:`_auth_gate` here is the staff-only baseline that fails fast
+   before a forward is built.
 2. Parse the request envelope.
 3. Hand off to :func:`~django_admin_mcp_api.server.dispatch.get_dispatcher`.
 
@@ -40,8 +41,7 @@ from django_admin_mcp_api.server import errors
 from django_admin_mcp_api.server import jsonrpc
 from django_admin_mcp_api.server import manifest
 from django_admin_mcp_api.server.dispatch import Dispatcher
-from django_admin_mcp_api.server.dispatch import UnknownRestApiPath
-from django_admin_mcp_api.server.dispatch import UnsupportedDispatchMethod
+from django_admin_mcp_api.server.dispatch import DispatchError
 from django_admin_mcp_api.server.dispatch import get_dispatcher
 
 # One module-level logger; consumers wire it into their log aggregation
@@ -146,10 +146,15 @@ def _handle_tools_call(
 
     try:
         response = dispatcher.dispatch(request=request, target=target)
-    except (NotImplementedError, UnknownRestApiPath, UnsupportedDispatchMethod) as exc:
-        # Catch the full set of exception types the dispatcher can
-        # raise. Before #45 only NotImplementedError was caught, so
-        # path/method mismatches escaped to Django's 500 handler.
+    except (DispatchError, NotImplementedError) as exc:
+        # Catch every dispatcher failure via the shared DispatchError
+        # base (UnknownRestApiPath, UnsupportedDispatchMethod, and any
+        # future subclass) so new failure modes can't regress to a
+        # Django 500 (#67). NotImplementedError stays in the tuple to
+        # cover a custom DISPATCHER_FACTORY that raises the plain
+        # builtin without subclassing DispatchError. Before #45 only
+        # NotImplementedError was caught, so path/method mismatches
+        # escaped to Django's 500 handler.
         _logger.warning(
             "mcp.tools_call.upstream_error",
             extra={
@@ -303,7 +308,7 @@ class McpEndpointView(View):
             return HttpResponse(_landing_html(payload), content_type="text/html; charset=utf-8")
         return JsonResponse(payload)
 
-    def post(self, request: HttpRequest) -> HttpResponse:  # noqa: D401 — Django view name.
+    def post(self, request: HttpRequest) -> HttpResponse:  # Django view name.
         gate = _auth_gate(request)
         if gate is not None:
             return gate

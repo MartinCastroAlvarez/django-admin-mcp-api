@@ -327,6 +327,39 @@ def test_dispatcher_upstream_exceptions_caught_into_jsonrpc_envelope(staff_clien
 
 
 @pytest.mark.django_db
+def test_novel_dispatch_error_subclass_caught_into_jsonrpc_envelope(staff_client):
+    """Closes #67 — a brand-new DispatchError subclass still maps to UPSTREAM.
+
+    The view catches the shared :class:`DispatchError` base, so a
+    dispatcher exception type that did not exist when the view was
+    written is handled the same way (no Django 500).
+    """
+    from unittest.mock import patch
+
+    from django_admin_mcp_api.server.dispatch import DispatchError
+
+    class NovelDispatchError(DispatchError):
+        """A subclass the view has never seen before."""
+
+    with patch("django_admin_mcp_api.server.views.get_dispatcher") as gd:
+        gd.return_value.dispatch.side_effect = NovelDispatchError("boom")
+        response = staff_client.post(
+            MCP,
+            data=jsonrpc_call(
+                "tools/call",
+                {
+                    "name": "admin.retrieve",
+                    "arguments": {"app_label": "auth", "model_name": "user", "pk": "1"},
+                },
+            ),
+            content_type="application/json",
+        )
+    assert response.status_code == 400
+    body = _decode(response)
+    assert body["error"]["code"] == errors.SERVER_ERROR_UPSTREAM
+
+
+@pytest.mark.django_db
 def test_tools_call_emits_structured_log(staff_client, caplog):
     """Closes #47 — every tools/call emits a structured INFO log."""
     import logging
