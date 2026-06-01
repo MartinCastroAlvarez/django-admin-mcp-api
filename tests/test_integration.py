@@ -145,3 +145,55 @@ def test_unknown_app_tool_returns_isError(staff_client):
     body = _decode(response)
     assert body["result"]["isError"] is True
     assert body["result"]["status"] >= 400
+
+
+# --------------------------------------------------------------------------- #
+# Custom request-driven form fixture (Job) — the cross-repo contract (#70).    #
+#                                                                              #
+# The Job admin overrides change_view to branch on ?run_custom=1 and render a  #
+# hand-rolled template (no change_form_template attribute). The MCP wire must  #
+# surface rest-api's two answers unchanged: the stock form-spec on Path A, and #
+# the renderer=="legacy-iframe" discriminator on Path B — so an agent knows    #
+# the form is not machine-driveable instead of inventing field values.         #
+# --------------------------------------------------------------------------- #
+def _form_spec_call(client, *, pk, query=None):
+    args = {"app_label": "jobs", "model_name": "job", "pk": str(pk)}
+    if query is not None:
+        args["query"] = query
+    with _REAL_DISPATCHER:
+        response = client.post(
+            MCP,
+            data=jsonrpc_call("tools/call", {"name": "admin.form_spec", "arguments": args}),
+            content_type="application/json",
+        )
+    assert response.status_code == 200, response.content
+    return _decode(response)["result"]["content"][0]["json"]
+
+
+@pytest.mark.django_db
+def test_form_spec_path_a_surfaces_textarea_metadata(superuser_client):
+    """Path A (no query) — the stock change form: ``formfield_for_dbfield``
+    surfaces the large-textarea widget on ``metadata``, machine-driveable."""
+    from tests.test_project.jobs.models import Job
+
+    job = Job.objects.create(name="nightly", metadata={"k": "v"}, status="idle")
+    content = _form_spec_call(superuser_client, pk=job.pk)
+
+    assert content["renderer"] == "form-spec"
+    widget = content["fields"]["metadata"]["widget"]
+    assert widget["kind"] == "textarea"
+    assert widget["attrs"]["class"] == "vLargeTextField"
+
+
+@pytest.mark.django_db
+def test_form_spec_path_b_returns_legacy_iframe_discriminator(superuser_client):
+    """Path B (query run_custom=1) — change_view renders a custom template,
+    so the MCP wire forwards rest-api's ``legacy-iframe`` discriminator with
+    the legacy URL preserved. An agent surfaces this as not-driveable."""
+    from tests.test_project.jobs.models import Job
+
+    job = Job.objects.create(name="nightly", status="idle")
+    content = _form_spec_call(superuser_client, pk=job.pk, query={"run_custom": "1"})
+
+    assert content["renderer"] == "legacy-iframe"
+    assert content["legacy_url"] == f"/admin/jobs/job/{job.pk}/change/?run_custom=1"

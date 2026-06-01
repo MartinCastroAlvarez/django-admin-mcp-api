@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-06-02
+
+### Changed
+- **Bumped the `django-admin-rest-api` floor to `^1.5.0`**, which broadens
+  the form-spec `legacy-iframe` detection to request-driven custom views
+  (a `change_view`/`add_view` override that renders a non-standard template,
+  not just the `change_form_template` attribute). No MCP code changes — the
+  wire adapter forwards rest-api's payload unchanged — so `admin.form_spec`
+  now surfaces `renderer: "legacy-iframe"` for those views too, letting a
+  caller know the form is not machine-driveable instead of inventing field
+  values ([#70](https://github.com/MartinCastroAlvarez/django-admin-mcp/issues/70)).
+
+### Added
+- **`Job` cross-repo fixture + end-to-end tests.** The test project now
+  carries the same `JobAdmin` fixture (request-driven custom `change_view`)
+  and mounts the legacy admin, so an integration test asserts the MCP wire
+  forwards both answers unchanged: Path A (`?` absent) → `form-spec` with the
+  large-textarea `metadata` widget; Path B (`query={"run_custom": "1"}`) →
+  `renderer: "legacy-iframe"` with the legacy URL preserved.
+
 ## [1.2.0] — 2026-06-01
 
 ### Added
