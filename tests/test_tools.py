@@ -79,6 +79,22 @@ CASES = [
         None,
     ),
     (
+        "admin.form_spec",
+        {"app_label": "auth", "model_name": "user", "pk": "7", "query": {"variant": "b"}},
+        "GET",
+        "/auth/user/7/form-spec/",
+        None,
+        {"variant": "b"},
+    ),
+    (
+        "admin.form_submit",
+        {"app_label": "auth", "model_name": "user", "pk": "7", "data": {"is_active": False}},
+        "PATCH",
+        "/auth/user/7/",
+        {"is_active": False},
+        None,
+    ),
+    (
         "admin.destroy",
         {"app_label": "auth", "model_name": "user", "pk": "7"},
         "DELETE",
@@ -176,3 +192,44 @@ def test_every_tool_covered_by_cases():
     assert (
         catalogued == covered
     ), f"Tool coverage drift — missing: {catalogued - covered}, extra: {covered - catalogued}"
+
+
+# --------------------------------------------------------------------------- #
+# form_spec / form_submit add-route (pk omitted) — the create-form variants    #
+# --------------------------------------------------------------------------- #
+def test_form_spec_add_route_when_pk_omitted():
+    target = tools.by_name("admin.form_spec").build_target(
+        {"app_label": "auth", "model_name": "user"}
+    )
+    assert target.method == "GET"
+    assert target.path == "/auth/user/add/form-spec/"
+    assert target.query is None
+
+
+def test_form_spec_add_route_when_pk_is_add_sentinel():
+    target = tools.by_name("admin.form_spec").build_target(
+        {"app_label": "auth", "model_name": "user", "pk": "add"}
+    )
+    assert target.path == "/auth/user/add/form-spec/"
+
+
+def test_form_submit_create_when_pk_omitted():
+    target = tools.by_name("admin.form_submit").build_target(
+        {"app_label": "auth", "model_name": "user", "data": {"username": "ada"}}
+    )
+    assert target.method == "POST"
+    assert target.path == "/auth/user/"
+    assert target.body == {"username": "ada"}
+
+
+def test_form_submit_forwards_query_for_request_aware_get_form():
+    target = tools.by_name("admin.form_submit").build_target(
+        {
+            "app_label": "auth",
+            "model_name": "user",
+            "pk": "7",
+            "data": {"is_active": True},
+            "query": {"variant": "b"},
+        }
+    )
+    assert target.query == {"variant": "b"}

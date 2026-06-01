@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-06-01
+
+### Added
+- **`admin.form_spec` + `admin.form_submit` tools** ([#70](https://github.com/MartinCastroAlvarez/django-admin-mcp/issues/70)).
+  `admin.form_spec(app_label, model_name, pk=None, query={})` returns the
+  ModelAdmin-resolved form for a row (or the add page when `pk` is
+  omitted) — request-aware `get_form` / `get_fieldsets` /
+  `get_readonly_fields`, with each field's resolved widget mapped to a
+  closed `widget.kind` enum. `admin.form_submit(…, data, query={})`
+  re-runs `is_valid()` server-side through the **same** resolved form, so
+  request-aware validation is identical across MCP, the SPA, and the
+  legacy admin. Both forward through to rest-api's `form-spec` endpoint
+  and write views, so the payload is byte-identical to the SPA's — one
+  resolver, no drift.
+
+### Changed
+- **Bumped the `django-admin-rest-api` floor to `^1.4.0`**, which ships
+  the `form-spec` endpoint the two new tools forward to (#70).
+
 ### Fixed
 - **`__version__` no longer drifts from the packaged version** (#62).
   It is now derived from the installed package metadata via

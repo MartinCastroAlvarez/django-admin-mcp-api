@@ -98,7 +98,9 @@ def test_tools_list_returns_all_tools(staff_client):
     names = {t["name"] for t in body["result"]["tools"]}
     assert "admin.registry" in names
     assert "admin.panel" in names
-    assert len(names) == 16
+    assert "admin.form_spec" in names
+    assert "admin.form_submit" in names
+    assert len(names) == 18
 
 
 @pytest.mark.django_db

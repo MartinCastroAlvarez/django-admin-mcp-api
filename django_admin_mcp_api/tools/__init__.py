@@ -25,6 +25,8 @@ from django_admin_mcp_api.tools import bulk_update
 from django_admin_mcp_api.tools import create
 from django_admin_mcp_api.tools import delete_preview
 from django_admin_mcp_api.tools import destroy
+from django_admin_mcp_api.tools import form_spec
+from django_admin_mcp_api.tools import form_submit
 from django_admin_mcp_api.tools import history
 from django_admin_mcp_api.tools import list_objects
 from django_admin_mcp_api.tools import panel
@@ -45,8 +47,10 @@ _TOOLS: tuple[Tool, ...] = (
     list_objects.TOOL,
     retrieve.TOOL,
     add_form.TOOL,
+    form_spec.TOOL,
     create.TOOL,
     update.TOOL,
+    form_submit.TOOL,
     destroy.TOOL,
     bulk_update.TOOL,
     autocomplete.TOOL,

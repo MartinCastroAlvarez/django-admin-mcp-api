@@ -146,8 +146,10 @@ that's the whole design.
 | `admin.list`            | A page of list-view results                        | `GET /api/v1/<app>/<model>/`                            |
 | `admin.retrieve`        | A single object's detail view                      | `GET /api/v1/<app>/<model>/<pk>/`                       |
 | `admin.add_form`        | Create-page field descriptors                      | `GET /api/v1/<app>/<model>/add/`                        |
+| `admin.form_spec`       | ModelAdmin-resolved form (request-aware `get_form` + closed `widget.kind` enum) | `GET /api/v1/<app>/<model>/<pk>/form-spec/` (or `/add/form-spec/`) |
 | `admin.create`          | Create one object                                  | `POST /api/v1/<app>/<model>/`                           |
 | `admin.update`          | Partial-update one object                          | `PATCH /api/v1/<app>/<model>/<pk>/`                     |
+| `admin.form_submit`     | Submit a form-spec's data (re-runs `is_valid()` with the same request-aware form) | `POST /api/v1/<app>/<model>/` or `PATCH …/<pk>/` |
 | `admin.destroy`         | Delete one object                                  | `DELETE /api/v1/<app>/<model>/<pk>/`                    |
 | `admin.bulk_update`     | Apply the same patch to many objects               | `PATCH /api/v1/<app>/<model>/bulk/`                     |
 | `admin.autocomplete`    | Autocomplete a related model                       | `GET /api/v1/<app>/<model>/autocomplete/`               |
