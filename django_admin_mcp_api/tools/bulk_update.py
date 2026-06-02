@@ -7,6 +7,8 @@ from typing import Any
 from django_admin_mcp_api.server.dispatch import DispatchTarget
 from django_admin_mcp_api.tools.base import APP_LABEL
 from django_admin_mcp_api.tools.base import MODEL_NAME
+from django_admin_mcp_api.tools.base import PK_ITEM
+from django_admin_mcp_api.tools.base import PKS_MAX_ITEMS
 from django_admin_mcp_api.tools.base import Tool
 
 
@@ -31,8 +33,9 @@ TOOL = Tool(
             "model_name": MODEL_NAME,
             "pks": {
                 "type": "array",
-                "items": {"type": "string"},
+                "items": PK_ITEM,
                 "minItems": 1,
+                "maxItems": PKS_MAX_ITEMS,
                 "description": "Primary keys of the target objects.",
             },
             "data": {
