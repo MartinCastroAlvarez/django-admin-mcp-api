@@ -386,3 +386,143 @@ def test_tools_call_emits_structured_log(staff_client, caplog):
     assert getattr(record, "tool", None) == "admin.retrieve"
     assert getattr(record, "user", None) == "staff"
     assert getattr(record, "status", None) == 200
+
+
+# -- #79: pks array / pk string bounds ------------------------------------
+
+
+@pytest.mark.django_db
+def test_oversized_pks_array_is_invalid_params(staff_client):
+    """Closes #79 — a pks array above maxItems fails at the schema layer."""
+    response = staff_client.post(
+        MCP,
+        data=jsonrpc_call(
+            "tools/call",
+            {
+                "name": "admin.bulk_update",
+                "arguments": {
+                    "app_label": "auth",
+                    "model_name": "user",
+                    "pks": [str(i) for i in range(1001)],  # maxItems is 1000
+                    "data": {"is_active": True},
+                },
+            },
+        ),
+        content_type="application/json",
+    )
+    assert response.status_code == 400
+    body = _decode(response)
+    assert body["error"]["code"] == errors.INVALID_PARAMS
+    assert "/pks" in body["error"]["message"]
+
+
+@pytest.mark.django_db
+def test_pk_with_slash_is_invalid_params(staff_client):
+    """Closes #79 — a pk containing a path separator is rejected by pattern."""
+    response = staff_client.post(
+        MCP,
+        data=jsonrpc_call(
+            "tools/call",
+            {
+                "name": "admin.retrieve",
+                "arguments": {"app_label": "auth", "model_name": "user", "pk": "1/../2"},
+            },
+        ),
+        content_type="application/json",
+    )
+    assert response.status_code == 400
+    body = _decode(response)
+    assert body["error"]["code"] == errors.INVALID_PARAMS
+    assert "/pk" in body["error"]["message"]
+
+
+# -- #80: discovery-side structured logging -------------------------------
+
+
+def _info_records(caplog, message):
+    return [r for r in caplog.records if r.message == message]
+
+
+@pytest.mark.django_db
+def test_initialize_emits_structured_log(staff_client, caplog):
+    """Closes #80 — initialize emits one mcp.method INFO log."""
+    import logging
+
+    with caplog.at_level(logging.INFO, logger="django_admin_mcp_api.server.views"):
+        staff_client.post(MCP, data=jsonrpc_call("initialize"), content_type="application/json")
+    records = _info_records(caplog, "mcp.method")
+    methods = [getattr(r, "method", None) for r in records]
+    assert "initialize" in methods
+    init = next(r for r in records if getattr(r, "method", None) == "initialize")
+    assert getattr(init, "user", None) == "staff"
+    assert getattr(init, "status", None) == 200
+
+
+@pytest.mark.django_db
+def test_tools_list_emits_structured_log(staff_client, caplog):
+    """Closes #80 — tools/list emits one mcp.method INFO log."""
+    import logging
+
+    with caplog.at_level(logging.INFO, logger="django_admin_mcp_api.server.views"):
+        staff_client.post(MCP, data=jsonrpc_call("tools/list"), content_type="application/json")
+    methods = [getattr(r, "method", None) for r in _info_records(caplog, "mcp.method")]
+    assert "tools/list" in methods
+
+
+@pytest.mark.django_db
+def test_manifest_get_emits_structured_log(staff_client, caplog):
+    """Closes #80 — GET /manifest/ emits one mcp.method INFO log."""
+    import logging
+
+    with caplog.at_level(logging.INFO, logger="django_admin_mcp_api.server.views"):
+        staff_client.get(MANIFEST)
+    methods = [getattr(r, "method", None) for r in _info_records(caplog, "mcp.method")]
+    assert "GET /manifest/" in methods
+
+
+@pytest.mark.django_db
+def test_get_landing_emits_structured_log(staff_client, caplog):
+    """Closes #80 — GET / landing emits one mcp.method INFO log."""
+    import logging
+
+    with caplog.at_level(logging.INFO, logger="django_admin_mcp_api.server.views"):
+        staff_client.get(MCP, HTTP_ACCEPT="application/json")
+    methods = [getattr(r, "method", None) for r in _info_records(caplog, "mcp.method")]
+    assert "GET /" in methods
+
+
+# -- #81: protocolVersion negotiation -------------------------------------
+
+
+@pytest.mark.django_db
+def test_initialize_echoes_supported_protocol_version(staff_client):
+    """Closes #81 — a matching protocolVersion is honoured and echoed back."""
+    response = staff_client.post(
+        MCP,
+        data=jsonrpc_call("initialize", {"protocolVersion": "2024-11-05"}),
+        content_type="application/json",
+    )
+    assert response.status_code == 200
+    body = _decode(response)
+    assert body["result"]["protocolVersion"] == "2024-11-05"
+
+
+@pytest.mark.django_db
+def test_initialize_logs_protocol_mismatch(staff_client, caplog):
+    """Closes #81 — a divergent protocolVersion is logged; ours is still returned."""
+    import logging
+
+    with caplog.at_level(logging.INFO, logger="django_admin_mcp_api.server.views"):
+        response = staff_client.post(
+            MCP,
+            data=jsonrpc_call("initialize", {"protocolVersion": "1999-01-01"}),
+            content_type="application/json",
+        )
+    assert response.status_code == 200
+    body = _decode(response)
+    # We support exactly one version, so we still return ours.
+    assert body["result"]["protocolVersion"] == "2024-11-05"
+    mismatch = _info_records(caplog, "mcp.initialize.protocol_mismatch")
+    assert len(mismatch) == 1
+    assert getattr(mismatch[0], "requested", None) == "1999-01-01"
+    assert getattr(mismatch[0], "supported", None) == "2024-11-05"
