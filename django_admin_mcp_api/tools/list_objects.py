@@ -26,7 +26,12 @@ TOOL = Tool(
     description=(
         "Return one page of list-view results for a model, honouring the consumer's "
         "ModelAdmin queryset, list_display, list_filter, ordering and search. "
-        "Mirrors GET /api/v1/<app_label>/<model_name>/ in django-admin-rest-api."
+        "Mirrors GET /api/v1/<app_label>/<model_name>/ in django-admin-rest-api.\n\n"
+        "This tool is an intentional changelist passthrough: unlike every other tool, "
+        "its schema is open (additionalProperties), so any extra key is forwarded "
+        "verbatim as a query parameter to match arbitrary ModelAdmin.list_filter "
+        "fields. Consequently a typo'd filter key is NOT schema-caught here — it is "
+        "forwarded and silently ignored by rest-api if unrecognised."
     ),
     input_schema={
         "type": "object",

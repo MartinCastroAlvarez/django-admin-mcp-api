@@ -99,6 +99,31 @@ Negotiates the protocol version and reports server capabilities.
 Returns the same catalogue `GET /manifest/` returns, in the
 MCP-spec-correct shape.
 
+**The catalogue is static and not permission-filtered.** Every
+authenticated staff caller receives the identical tool list (the full
+registered set minus `DISABLED_TOOLS`); it is *not* narrowed by the
+caller's per-model `ModelAdmin.has_*_permission`. This is intentional
+(#77):
+
+- The catalogue lists **capabilities** (verbs like `admin.list`,
+  `admin.destroy`), not **model instances**. A single `admin.destroy`
+  tool applies to whatever model the caller has delete permission on;
+  there is no per-model tool variant to hide. rest-api's per-user
+  registry (`GET /registry/`, surfaced as `admin.registry`) answers the
+  *which models can I touch?* question on the correct axis.
+- Filtering the tool list against the registry would not produce a
+  meaningful narrowing (a verb either applies to all of a user's models
+  or none), and doing it any other way would mean re-deriving
+  permissions inside this layer — forbidden by the prime directive
+  (rest-api owns authorization; this package never calls `has_perm`).
+
+**Presence in the catalogue is therefore not authorization.** A tool
+appearing in `tools/list` only means the server *exposes* that verb —
+the actual permission check runs per call inside rest-api, which returns
+the appropriate 4xx (surfaced as `isError: true` content) if the caller
+lacks permission on the target model. Agents must not treat catalogue
+presence as a grant. See `threat-model.md` for the security framing.
+
 **Request params**: none.
 
 **Result**:

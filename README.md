@@ -133,7 +133,7 @@ it.
 
 ---
 
-## 📡 The 16 tools
+## 📡 The 18 tools
 
 Each MCP tool is a 1:1 mirror of a `django-admin-rest-api` endpoint —
 that's the whole design.
@@ -385,7 +385,7 @@ poetry run bash scripts/lint.sh
 poetry run bash scripts/audit-deps.sh
 ```
 
-96 tests, 93% line coverage, including a real end-to-end run through
+120 tests, 95% line coverage, including a real end-to-end run through
 `django-admin-rest-api`. CI runs the same suite across Python
 3.10–3.13 × Django 5.0/5.1/5.2/6.0 on every PR.
 
