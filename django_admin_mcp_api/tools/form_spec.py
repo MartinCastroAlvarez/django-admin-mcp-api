@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from django_admin_mcp_api.server.dispatch import DispatchTarget
+from django_admin_mcp_api.tools import custom_template
 from django_admin_mcp_api.tools.base import APP_LABEL
 from django_admin_mcp_api.tools.base import MODEL_NAME
 from django_admin_mcp_api.tools.base import Tool
@@ -35,6 +36,23 @@ def _build_target(arguments: dict[str, Any]) -> DispatchTarget:
     else:
         path = f"/{app}/{model}/{pk}/form-spec/"
     return DispatchTarget(method="GET", path=path, query=_query(arguments))
+
+
+def _transform_response(body: Any) -> Any:
+    """Rename rest-api's ``html-fragment`` into the MCP ``custom-template``
+    discriminator (#84); pass every other body through unchanged.
+
+    rest-api owns detection — when its resolver renders a custom template it
+    returns ``renderer: "html-fragment"`` (a server-rendered page the SPA can
+    show but an MCP client can't drive). We surface that as
+    ``renderer: "custom-template"`` with ``machine_driveable: false`` plus the
+    legacy + SPA URLs, so a client gets an honest non-driveable signal instead
+    of an opaque HTML blob it would try to fake field values for. The stock
+    JSON form-spec (``renderer: "form-spec"``, ``fields`` present) is untouched.
+    """
+    if custom_template.is_custom_template(body):
+        return custom_template.discriminator(body)
+    return body
 
 
 TOOL = Tool(
@@ -71,4 +89,5 @@ TOOL = Tool(
         "additionalProperties": False,
     },
     build_target=_build_target,
+    transform_response=_transform_response,
 )

@@ -2,13 +2,23 @@
 
 from __future__ import annotations
 
+import json
+from typing import TYPE_CHECKING
 from typing import Any
 
 from django_admin_mcp_api.server.dispatch import DispatchTarget
+from django_admin_mcp_api.tools import custom_template
 from django_admin_mcp_api.tools.base import APP_LABEL
 from django_admin_mcp_api.tools.base import MODEL_NAME
 from django_admin_mcp_api.tools.base import Tool
+from django_admin_mcp_api.tools.form_spec import _build_target as _form_spec_target
 from django_admin_mcp_api.tools.form_spec import _query
+
+if TYPE_CHECKING:
+    from django.http import HttpRequest
+
+    from django_admin_mcp_api.server.dispatch import Dispatcher
+    from django_admin_mcp_api.tools.base import InterceptResult
 
 
 def _build_target(arguments: dict[str, Any]) -> DispatchTarget:
@@ -31,6 +41,51 @@ def _build_target(arguments: dict[str, Any]) -> DispatchTarget:
     return DispatchTarget(
         method="PATCH", path=f"/{app}/{model}/{pk}/", body=data, query=_query(arguments)
     )
+
+
+def _resolves_to_custom_template(
+    arguments: dict[str, Any],
+    request: HttpRequest,
+    dispatcher: Dispatcher,
+) -> bool:
+    """Pre-flight the *same* form-spec resolution this submit would target.
+
+    We forward a GET form-spec (identical app/model/pk/query) through the
+    shared resolver and inspect the renderer. This is the single source of
+    truth for "is this a custom template" — we never re-detect locally. A
+    resolution error (4xx/5xx, non-JSON) is treated as "not custom-template"
+    so the normal forward path runs and surfaces rest-api's real error.
+    """
+    spec_target = _form_spec_target(arguments)
+    response = dispatcher.dispatch(request=request, target=spec_target)
+    body = getattr(response, "content", b"")
+    if not body:
+        return False
+    try:
+        decoded = json.loads(body)
+    except (TypeError, ValueError):
+        return False
+    return custom_template.is_custom_template(decoded)
+
+
+def _intercept(
+    arguments: dict[str, Any],
+    request: HttpRequest,
+    dispatcher: Dispatcher,
+) -> InterceptResult | None:
+    """Refuse to submit a custom-template form *before* forwarding a POST (#84).
+
+    A ``change_form_template`` / custom ``change_view`` page is opaque HTML the
+    MCP client can't introspect; any field values we synthesised and POSTed
+    would be wrong and the legacy view would reject them. So we resolve the
+    form-spec first and, if it is a custom template, return the refusal
+    discriminator with a 422 status (the request was well-formed but the target
+    is not driveable) instead of building/forwarding the create/update POST.
+    Every other form returns ``None`` here and follows the normal path.
+    """
+    if _resolves_to_custom_template(arguments, request, dispatcher):
+        return custom_template.refusal(), 422
+    return None
 
 
 TOOL = Tool(
@@ -68,4 +123,5 @@ TOOL = Tool(
         "additionalProperties": False,
     },
     build_target=_build_target,
+    intercept=_intercept,
 )

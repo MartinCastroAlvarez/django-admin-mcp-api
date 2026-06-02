@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] — 2026-06-02
+
+### Changed
+- **Bumped the `django-admin-rest-api` floor to `^1.7.0`**, which replaces the
+  legacy-iframe path with server-rendered `html-fragment` form-spec payloads
+  for ModelAdmins that render a custom template
+  ([#84](https://github.com/MartinCastroAlvarez/django-admin-mcp/issues/84)).
+
+### Added
+- **`custom-template` discriminator for `change_form_template` admins**
+  ([#84](https://github.com/MartinCastroAlvarez/django-admin-mcp/issues/84)).
+  When rest-api's shared form-spec resolver renders a custom template (a
+  declared `change_form_template` / `add_form_template`, or a request-driven
+  `change_view` override) it returns `renderer: "html-fragment"` — opaque HTML
+  an MCP client can't introspect or drive. `admin.form_spec` now renames that
+  single upstream signal to a clear non-driveable discriminator:
+  `{ "renderer": "custom-template", "reason": "ModelAdmin override: change_form_template",
+  "legacy_url": …, "spa_url": …, "machine_driveable": false }`. `legacy_url` is
+  the upstream `submit_url`; `spa_url` is derived by **reusing** rest-api's
+  `map_redirect_to_spa` (the `/admin/` → `SPA_URL_PREFIX` swap), so detection is
+  never duplicated here. `admin.form_submit` against such a form now **refuses**
+  to submit — it does not fabricate field values or forward a POST — and returns
+  `{ "ok": false, "reason": "custom-template", "message": "… not programmatically driveable …" }`
+  (`isError: true`, status `422`). The pre-1.7.0 `legacy-iframe` branch is
+  dropped: MCP clients never iframed anything, so it was never meaningful here.
+
+### Documentation
+- **`tools-reference.md`**: documented `admin.form_spec` / `admin.form_submit`
+  (previously undocumented) and the `custom-template` discriminator + refusal.
+- **`api-contract.md §4.4`**: documented the one narrow exception to the
+  pure-pass-through contract (the `html-fragment` → `custom-template` rename).
+- **`threat-model.md §3`**: added the "agent fabricating field values for an
+  opaque custom-template form" row (mitigated by the discriminator + refusal).
+
 ## [1.4.0] — 2026-06-02
 
 ### Changed
