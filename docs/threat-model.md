@@ -52,6 +52,7 @@ Two boundaries:
 | `@csrf_exempt` sneaking into the package                        | Pre-commit `no-csrf-exempt` pygrep + `test_no_csrf_exempt_in_package` test.                 |
 | Direct DB access in the dispatch layer                          | Pre-commit `no-objects-all-in-server` pygrep + `test_no_direct_objects_queries_in_server`.  |
 | `user.has_perm` calls reintroducing a parallel permission system | `test_no_user_has_perm_in_package`.                                                         |
+| Agent fabricating field values for an opaque custom-template form | `admin.form_spec` returns the `custom-template` discriminator (`machine_driveable: false`) and `admin.form_submit` **refuses** to forward a POST (#84). Detection is rest-api's shared resolver — see `api-contract.md §4.4`. |
 
 ## 4. What the MCP layer does NOT protect against (by design)
 

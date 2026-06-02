@@ -29,6 +29,8 @@ Conventions:
 | [`admin.list`](#adminlist) | GET | `app_label`, `model_name` |
 | [`admin.retrieve`](#adminretrieve) | GET | `app_label`, `model_name`, `pk` |
 | [`admin.add_form`](#adminadd_form) | GET | `app_label`, `model_name` |
+| [`admin.form_spec`](#adminform_spec) | GET | `app_label`, `model_name` |
+| [`admin.form_submit`](#adminform_submit) | POST/PATCH | `app_label`, `model_name`, `data` |
 | [`admin.create`](#admincreate) | POST | `app_label`, `model_name`, `data` |
 | [`admin.update`](#adminupdate) | PATCH | `app_label`, `model_name`, `pk`, `data` |
 | [`admin.destroy`](#admindestroy) | DELETE | `app_label`, `model_name`, `pk` |
@@ -142,6 +144,87 @@ validators.
 
 - **Forwards to**: `GET /api/v1/<app_label>/<model_name>/add/`
 - **Arguments**: `app_label`, `model_name`.
+
+---
+
+## `admin.form_spec`
+
+Return the ModelAdmin-resolved form for a row (or the add page when `pk`
+is omitted): request-aware `get_form` / `get_fieldsets` /
+`get_readonly_fields`, with each field's widget mapped to a closed
+`widget.kind` enum. Pass `query` to forward a querystring so a
+request-aware `get_form` (e.g. `?variant=…`) resolves the same form the
+SPA / legacy admin would.
+
+- **Forwards to**: `GET /api/v1/<app_label>/<model_name>/<pk>/form-spec/`
+  (or `…/add/form-spec/`).
+- **Arguments**: `app_label`, `model_name`, optional `pk`, optional `query`.
+
+The normal response carries `renderer: "form-spec"` plus a `fields` map.
+
+### The `custom-template` discriminator
+
+When the resolved ModelAdmin renders a **custom template** —
+a declared `change_form_template` / `add_form_template`, or a
+`change_view` override that renders a hand-rolled page for this request —
+rest-api 1.7.0 resolves the form-spec to `renderer: "html-fragment"`
+(server-rendered HTML the SPA can show). MCP clients can't introspect or
+drive opaque HTML, so the MCP wire renames that single upstream signal to
+a clear non-driveable discriminator:
+
+```jsonc
+{
+  "renderer": "custom-template",
+  "reason": "ModelAdmin override: change_form_template",
+  "legacy_url": "/admin/<app>/<model>/<pk>/change/?…",
+  "spa_url":    "/admin2/<app>/<model>/<pk>/change/?…",
+  "machine_driveable": false
+}
+```
+
+Detection is **not** duplicated here — it lives in rest-api's shared
+form-spec resolver (single source of truth). The MCP layer only renames
+`html-fragment` → `custom-template` and derives `spa_url` from the legacy
+URL by reusing rest-api's `map_redirect_to_spa` (the `/admin/` →
+`SPA_URL_PREFIX`, default `/admin2/`, swap). `legacy_url` is the upstream
+payload's `submit_url`. The pre-1.7.0 `legacy-iframe` branch is dropped —
+MCP clients never iframed anything, so it was never meaningful here.
+
+A client should surface `machine_driveable: false` to the caller ("this
+admin view uses a custom template and isn't programmatically driveable —
+open it in the SPA or legacy admin") rather than try to drive the form.
+
+---
+
+## `admin.form_submit`
+
+Submit a form's `data` through the consumer's `ModelAdmin.get_form()`,
+re-running `is_valid()` server-side with the **same** request-aware
+resolution as `admin.form_spec` (pass the matching `query`). Omit `pk` to
+create, or give `pk` to update. On validation failure the response
+carries per-field errors under `fields[<name>]`.
+
+- **Forwards to**: `POST /api/v1/<app_label>/<model_name>/` (create) or
+  `PATCH /api/v1/<app_label>/<model_name>/<pk>/` (update).
+- **Arguments**: `app_label`, `model_name`, `data`, optional `pk`,
+  optional `query`.
+
+### Refusal on a `custom-template` form
+
+`admin.form_submit` first resolves the form-spec (the shared resolver). If
+it is a `custom-template` form, the tool **refuses to submit** — it does
+not fabricate field values or forward a POST the legacy view would reject —
+and returns:
+
+```jsonc
+{
+  "ok": false,
+  "reason": "custom-template",
+  "message": "This admin view uses a custom template and is not programmatically driveable — open it in the SPA or legacy admin."
+}
+```
+
+The result is flagged `isError: true` (HTTP-style status `422`).
 
 ---
 

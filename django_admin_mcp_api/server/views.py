@@ -175,6 +175,34 @@ def _handle_tools_call(
     if schema_error is not None:
         return jsonrpc.failure(rpc.id, errors.INVALID_PARAMS, schema_error)
 
+    # A tool may short-circuit before any forward is built (#84): e.g.
+    # admin.form_submit refuses a custom-template form rather than POSTing
+    # synthesised field values. The intercept owns its own (well-formed)
+    # resolution; a dispatcher failure inside it is handled like any other.
+    if tool.intercept is not None:
+        try:
+            intercepted = tool.intercept(arguments, request, dispatcher)
+        except (DispatchError, NotImplementedError) as exc:
+            return _upstream_error(request, name, exc, rpc.id)
+        if intercepted is not None:
+            body, status_code = intercepted
+            _logger.info(
+                "mcp.tools_call",
+                extra={
+                    "user": getattr(request.user, "username", None),
+                    "tool": name,
+                    "status": status_code,
+                },
+            )
+            return jsonrpc.success(
+                rpc.id,
+                {
+                    "content": [{"type": "json", "json": body}],
+                    "isError": status_code >= 400,
+                    "status": status_code,
+                },
+            )
+
     try:
         target = tool.build_target(arguments)
     except KeyError as exc:
@@ -189,23 +217,7 @@ def _handle_tools_call(
     try:
         response = dispatcher.dispatch(request=request, target=target)
     except (DispatchError, NotImplementedError) as exc:
-        # Catch every dispatcher failure via the shared DispatchError
-        # base (UnknownRestApiPath, UnsupportedDispatchMethod, and any
-        # future subclass) so new failure modes can't regress to a
-        # Django 500 (#67). NotImplementedError stays in the tuple to
-        # cover a custom DISPATCHER_FACTORY that raises the plain
-        # builtin without subclassing DispatchError. Before #45 only
-        # NotImplementedError was caught, so path/method mismatches
-        # escaped to Django's 500 handler.
-        _logger.warning(
-            "mcp.tools_call.upstream_error",
-            extra={
-                "user": getattr(request.user, "username", None),
-                "tool": name,
-                "exc_type": type(exc).__name__,
-            },
-        )
-        return jsonrpc.failure(rpc.id, errors.SERVER_ERROR_UPSTREAM, str(exc))
+        return _upstream_error(request, name, exc, rpc.id)
 
     status_code = getattr(response, "status_code", 200)
     _logger.info(
@@ -216,14 +228,47 @@ def _handle_tools_call(
             "status": status_code,
         },
     )
+    body = _decode_response_body(response)
+    if tool.transform_response is not None:
+        # Tools may rename a discriminator in the decoded body before it is
+        # returned — e.g. admin.form_spec maps rest-api's html-fragment into
+        # the custom-template discriminator (#84). Detection still lives in
+        # rest-api; the transform only renames what came back.
+        body = tool.transform_response(body)
     return jsonrpc.success(
         rpc.id,
         {
-            "content": [{"type": "json", "json": _decode_response_body(response)}],
+            "content": [{"type": "json", "json": body}],
             "isError": _is_error_response(response),
             "status": status_code,
         },
     )
+
+
+def _upstream_error(
+    request: HttpRequest,
+    name: str,
+    exc: Exception,
+    request_id: Any,
+) -> dict[str, Any]:
+    """Map a dispatcher failure to a JSON-RPC ``SERVER_ERROR_UPSTREAM`` envelope.
+
+    Catch every dispatcher failure via the shared ``DispatchError`` base
+    (``UnknownRestApiPath``, ``UnsupportedDispatchMethod``, and any future
+    subclass) so new failure modes can't regress to a Django 500 (#67).
+    ``NotImplementedError`` is also handled by the callers to cover a custom
+    ``DISPATCHER_FACTORY`` that raises the plain builtin without subclassing
+    ``DispatchError``.
+    """
+    _logger.warning(
+        "mcp.tools_call.upstream_error",
+        extra={
+            "user": getattr(request.user, "username", None),
+            "tool": name,
+            "exc_type": type(exc).__name__,
+        },
+    )
+    return jsonrpc.failure(request_id, errors.SERVER_ERROR_UPSTREAM, str(exc))
 
 
 def _validate_arguments(arguments: dict[str, Any], schema: dict[str, Any]) -> str | None:

@@ -16,20 +16,49 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from dataclasses import field
+from typing import TYPE_CHECKING
 from typing import Any
 
 from django_admin_mcp_api.server.dispatch import DispatchTarget
 
+if TYPE_CHECKING:
+    from django.http import HttpRequest
+
+    from django_admin_mcp_api.server.dispatch import Dispatcher
+
+# A tool may short-circuit the normal single-dispatch flow. An ``intercept``
+# hook receives the validated arguments plus the live request/dispatcher and
+# either returns a ``(decoded_body, status)`` pair to use as the tool result —
+# bypassing the forward entirely — or ``None`` to fall through to the standard
+# ``build_target`` → dispatch path. ``admin.form_submit`` uses this to refuse a
+# custom-template form *before* any POST is forwarded (#84).
+InterceptResult = tuple[dict[str, Any], int]
+Intercept = Callable[
+    [dict[str, Any], "HttpRequest", "Dispatcher"],
+    "InterceptResult | None",
+]
+
 
 @dataclass(frozen=True)
 class Tool:
-    """A single MCP tool descriptor + argument translator."""
+    """A single MCP tool descriptor + argument translator.
+
+    Beyond the MCP descriptor fields and ``build_target``, a tool may declare
+    two optional hooks that the view layer applies around the forward:
+
+    * ``transform_response`` — rewrite the decoded rest-api body before it is
+      placed in the JSON-RPC result. ``admin.form_spec`` uses it to rename
+      rest-api's ``html-fragment`` into the ``custom-template`` discriminator.
+    * ``intercept`` — short-circuit before dispatch (see :data:`Intercept`).
+    """
 
     name: str
     description: str
     input_schema: dict[str, Any]
     build_target: Callable[[dict[str, Any]], DispatchTarget]
     output_schema: dict[str, Any] | None = field(default=None)
+    transform_response: Callable[[Any], Any] | None = field(default=None)
+    intercept: Intercept | None = field(default=None)
 
     def to_manifest_entry(self) -> dict[str, Any]:
         """Render this tool for ``tools/list`` and the GET manifest."""

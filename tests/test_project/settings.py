@@ -28,8 +28,8 @@ INSTALLED_APPS = [
     "django.contrib.admin",
     "django_admin_rest_api",
     "django_admin_mcp_api",
-    # Test-only app exercising the request-driven custom-view → legacy-iframe
-    # escape hatch end-to-end through the MCP wire (#70 cross-repo fixture).
+    # Test-only app exercising the request-driven custom-view → custom-template
+    # discriminator end-to-end through the MCP wire (#84 cross-repo fixture).
     "tests.test_project.jobs",
 ]
 

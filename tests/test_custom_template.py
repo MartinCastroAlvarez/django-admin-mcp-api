@@ -120,3 +120,88 @@ def test_form_spec_no_custom_template_returns_field_map(superuser_client):
 
     assert spec["renderer"] != "custom-template"
     assert "fields" in spec
+
+
+# --------------------------------------------------------------------------- #
+# Unit-level coverage of the discriminator helpers (no rest-api round trip).   #
+# --------------------------------------------------------------------------- #
+from django.http import HttpResponse  # noqa: E402
+
+from django_admin_mcp_api.tools import custom_template  # noqa: E402
+from django_admin_mcp_api.tools import form_submit  # noqa: E402
+
+
+def test_discriminator_maps_submit_url_to_legacy_and_spa():
+    body = {"renderer": "html-fragment", "submit_url": "/admin/jobs/job/7/change/?run_custom=1"}
+    out = custom_template.discriminator(body)
+    assert out["renderer"] == "custom-template"
+    assert out["machine_driveable"] is False
+    assert out["reason"] == "ModelAdmin override: change_form_template"
+    assert out["legacy_url"] == "/admin/jobs/job/7/change/?run_custom=1"
+    assert out["spa_url"] == "/admin2/jobs/job/7/change/?run_custom=1"
+
+
+def test_is_custom_template_only_for_html_fragment():
+    assert custom_template.is_custom_template({"renderer": "html-fragment"}) is True
+    assert custom_template.is_custom_template({"renderer": "form-spec"}) is False
+    assert custom_template.is_custom_template("not-a-dict") is False
+
+
+def test_refusal_message_says_not_programmatically_driveable():
+    refusal = custom_template.refusal()
+    assert refusal["ok"] is False
+    assert refusal["reason"] == "custom-template"
+    assert "not programmatically driveable" in refusal["message"].lower()
+
+
+class _StubDispatcher:
+    """Returns a fixed HttpResponse body regardless of target — used to drive
+    the form_submit intercept's resolution branch without rest-api."""
+
+    def __init__(self, body):
+        self._body = body
+
+    def dispatch(self, *, request, target):  # noqa: ANN001, ARG002
+        return HttpResponse(self._body, content_type="application/json")
+
+
+def test_intercept_refuses_when_resolution_is_html_fragment(rf):
+    request = rf.post("/mcp/")
+    dispatcher = _StubDispatcher(
+        b'{"renderer": "html-fragment", "submit_url": "/admin/x/y/1/change/"}'
+    )
+    result = form_submit._intercept(
+        {"app_label": "x", "model_name": "y", "pk": "1", "data": {}}, request, dispatcher
+    )
+    assert result is not None
+    body, status = result
+    assert status == 422
+    assert body == custom_template.refusal()
+
+
+def test_intercept_passes_through_for_normal_form_spec(rf):
+    request = rf.post("/mcp/")
+    dispatcher = _StubDispatcher(b'{"renderer": "form-spec", "fields": {}}')
+    result = form_submit._intercept(
+        {"app_label": "x", "model_name": "y", "pk": "1", "data": {}}, request, dispatcher
+    )
+    assert result is None
+
+
+def test_intercept_passes_through_on_unparseable_resolution(rf):
+    request = rf.post("/mcp/")
+    # Empty + non-JSON bodies both fall through to the normal forward path.
+    assert (
+        form_submit._intercept(
+            {"app_label": "x", "model_name": "y", "data": {}}, request, _StubDispatcher(b"")
+        )
+        is None
+    )
+    assert (
+        form_submit._intercept(
+            {"app_label": "x", "model_name": "y", "data": {}},
+            request,
+            _StubDispatcher(b"<html>not json</html>"),
+        )
+        is None
+    )

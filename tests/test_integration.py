@@ -153,7 +153,7 @@ def test_unknown_app_tool_returns_isError(staff_client):
 # The Job admin overrides change_view to branch on ?run_custom=1 and render a  #
 # hand-rolled template (no change_form_template attribute). The MCP wire must  #
 # surface rest-api's two answers unchanged: the stock form-spec on Path A, and #
-# the renderer=="legacy-iframe" discriminator on Path B — so an agent knows    #
+# the renderer=="custom-template" discriminator on Path B — so an agent knows  #
 # the form is not machine-driveable instead of inventing field values.         #
 # --------------------------------------------------------------------------- #
 def _form_spec_call(client, *, pk, query=None):
@@ -186,25 +186,27 @@ def test_form_spec_path_a_surfaces_textarea_metadata(superuser_client):
 
 
 @pytest.mark.django_db
-def test_form_spec_path_b_returns_legacy_iframe_discriminator(superuser_client):
-    """Path B (query run_custom=1) — change_view renders a custom template,
-    so the MCP wire forwards rest-api's ``legacy-iframe`` discriminator with
-    the legacy URL preserved. An agent surfaces this as not-driveable.
+def test_form_spec_path_b_returns_custom_template_discriminator(superuser_client):
+    """Path B (query run_custom=1) — change_view renders a custom template, so
+    rest-api 1.7.0 resolves the form-spec to ``renderer: "html-fragment"`` and
+    the MCP wire renames it to the ``custom-template`` discriminator: the legacy
+    URL preserved, the SPA URL derived, ``machine_driveable: false``. An agent
+    surfaces this as not-driveable instead of inventing field values.
 
-    Version coupling (#75): the ``legacy-iframe`` discriminator is emitted by
-    rest-api, not by this package — request-driven custom views were detected
-    and surfaced starting in django-admin-rest-api 1.5.0. This test therefore
-    only passes against a rest-api floor that ships that behaviour; our
-    ``pyproject.toml`` floor of ``^1.6.0`` guarantees it on a fresh install.
-    If this assertion regresses to ``form-spec``, the cause is almost always a
-    rest-api version older than 1.5.0 — not a fixture or MCP-layer bug. The
-    fixture ``JobAdmin.change_view`` (tests/test_project/jobs/admin.py) branches
-    on ``?run_custom=1`` to a hand-rolled template, which is what makes rest-api
-    classify the page as legacy/not-driveable."""
+    Version coupling (#84): rest-api detects the custom template (single source
+    of truth); request-driven custom views return ``html-fragment`` starting in
+    django-admin-rest-api 1.7.0. Our ``pyproject.toml`` floor of ``^1.7.0``
+    guarantees it on a fresh install. If this regresses to ``form-spec``, the
+    cause is almost always a rest-api version older than 1.7.0 — not a fixture
+    or MCP-layer bug. The fixture ``JobAdmin.change_view``
+    (tests/test_project/jobs/admin.py) branches on ``?run_custom=1`` to a
+    hand-rolled template, which is what makes rest-api render html-fragment."""
     from tests.test_project.jobs.models import Job
 
     job = Job.objects.create(name="nightly", status="idle")
     content = _form_spec_call(superuser_client, pk=job.pk, query={"run_custom": "1"})
 
-    assert content["renderer"] == "legacy-iframe"
+    assert content["renderer"] == "custom-template"
+    assert content["machine_driveable"] is False
     assert content["legacy_url"] == f"/admin/jobs/job/{job.pk}/change/?run_custom=1"
+    assert content["spa_url"] == f"/admin2/jobs/job/{job.pk}/change/?run_custom=1"

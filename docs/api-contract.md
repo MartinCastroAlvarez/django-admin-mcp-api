@@ -185,6 +185,33 @@ not run the call (bad envelope, unknown method, schema violation). An
 `isError: true` result content means *rest-api* ran the call and
 returned a 4xx — the wire layer did its job.
 
+### 4.4 The `custom-template` discriminator (form-spec / form-submit)
+
+The wire is a pure pass-through with one narrow, documented exception: the
+`custom-template` discriminator. When a ModelAdmin renders a custom
+template (a declared `change_form_template` / `add_form_template`, or a
+`change_view` override that renders a hand-rolled page for the request),
+rest-api 1.7.0's shared form-spec resolver returns
+`renderer: "html-fragment"` — server-rendered HTML the SPA can show but an
+MCP client can't introspect or drive.
+
+Because there is no field map to inspect, the wire renames that single
+upstream signal — it does **not** re-detect anything:
+
+- `admin.form_spec` returns
+  `{ "renderer": "custom-template", "reason": "ModelAdmin override: change_form_template", "legacy_url": …, "spa_url": …, "machine_driveable": false }`.
+  `legacy_url` is the upstream `submit_url`; `spa_url` is derived by reusing
+  rest-api's `map_redirect_to_spa` (the `/admin/` → `SPA_URL_PREFIX` swap).
+- `admin.form_submit` resolves the form-spec first and, if it is a
+  `custom-template` form, **refuses** to submit (no fabricated field values,
+  no forwarded POST), returning
+  `{ "ok": false, "reason": "custom-template", "message": "… not programmatically driveable …" }`
+  with `isError: true` and `status: 422`.
+
+The pre-1.7.0 `legacy-iframe` discriminator is dropped — MCP clients never
+iframed anything, so it was never meaningful here. See
+[`tools-reference.md`](tools-reference.md#adminform_spec) for the full shape.
+
 ## 5. Tool catalogue
 
 The catalogue is exposed via `tools/list` and `GET /manifest/`. The
