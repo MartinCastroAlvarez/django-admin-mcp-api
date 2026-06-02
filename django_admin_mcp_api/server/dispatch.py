@@ -141,6 +141,10 @@ class RestApiDispatcher:
         # Carry over auth-bearing attributes so rest-api sees the same
         # caller that the MCP endpoint saw. We do not mutate the
         # original ``request`` — the synthetic gets its own attributes.
+        # The authoritative carried/omitted contract (and the rationale
+        # for skipping middleware) lives in ARCHITECTURE.md
+        # "Synthetic-request attribute contract" (#82b); keep the two in
+        # sync if this set changes.
         synthetic.user = request.user
         if hasattr(request, "session"):
             synthetic.session = request.session

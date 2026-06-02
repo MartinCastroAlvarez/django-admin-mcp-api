@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] — 2026-06-02
+
+### Changed
+- **Bumped the `django-admin-rest-api` floor to `^1.6.0`**, which adds the
+  JSON 405 envelope, prepopulated/autocomplete hints, gettext i18n, and
+  security logging. The MCP wire forwards rest-api's payloads unchanged, so
+  no tool behaviour changes here — but pinning the floor guarantees the
+  `legacy-iframe` discriminator (shipped in rest-api 1.5.0) is present on a
+  fresh `poetry install`, keeping the integration suite green
+  ([#75](https://github.com/MartinCastroAlvarez/django-admin-mcp/issues/75)).
+
+### Added
+- **Defense-in-depth schema bounds on primary keys** ([#79](https://github.com/MartinCastroAlvarez/django-admin-mcp/issues/79)).
+  The shared `PK` string schema now carries `minLength`/`maxLength` (256) and
+  a `^[^/?#]+$` pattern that forbids path-structural characters, and the `pks`
+  arrays in `admin.action` / `admin.bulk_update` gain `maxItems` (1000). Typo'd
+  or oversized inputs now fail with a precise `INVALID_PARAMS` json-pointer
+  instead of forwarding to rest-api.
+- **Discovery-side structured logging** ([#80](https://github.com/MartinCastroAlvarez/django-admin-mcp/issues/80)).
+  `initialize`, `tools/list`, the GET landing, and `GET /manifest/` now each
+  emit one `{user, method, status}` INFO log (`mcp.method`), closing the
+  forensic gap where the full capability surface could be enumerated with no
+  audit trail. Request bodies are still never logged.
+- **`initialize` protocol-version negotiation** ([#81](https://github.com/MartinCastroAlvarez/django-admin-mcp/issues/81)).
+  The server now reads `params.protocolVersion`; a divergent value is logged
+  (`mcp.initialize.protocol_mismatch`) and the single supported version is
+  still returned, laying groundwork for future multi-version support.
+- **Doc-fidelity test** asserting the README "The N tools" heading equals
+  `len(tools.all_tools())` so the documented count can't drift again
+  ([#76](https://github.com/MartinCastroAlvarez/django-admin-mcp/issues/76)).
+
+### Changed (internal)
+- **Memoised the immutable tool catalogue** ([#82](https://github.com/MartinCastroAlvarez/django-admin-mcp/issues/82)).
+  `tools_catalogue()` now caches its rendered list keyed on `DISABLED_TOOLS`
+  rather than rebuilding 18 manifest entries on every `tools/list`, GET `/`,
+  and `GET /manifest/`. The cache is the globally-shareable *base* catalogue.
+
+### Documentation
+- **README:** corrected the "The 16 tools" heading to "The 18 tools" and
+  refreshed the stale dev stats (120 tests / 95% coverage)
+  ([#76](https://github.com/MartinCastroAlvarez/django-admin-mcp/issues/76)).
+- **Static tool catalogue is now explicitly documented as not
+  permission-filtered** in `api-contract.md §4.2` and `threat-model.md §4.1`
+  (presence ≠ permission; authz is enforced per call inside rest-api). Per-user
+  filtering was evaluated and intentionally declined: tools are model-generic
+  verbs, the per-user *model* axis is already answered by `admin.registry`, and
+  any other filter would re-derive permissions locally — forbidden by the prime
+  directive ([#77](https://github.com/MartinCastroAlvarez/django-admin-mcp/issues/77)).
+- **`admin.list` documented as an intentional changelist passthrough** in
+  `tools-reference.md` and the tool description: unknown keys forward verbatim
+  as query params and are not schema-caught, mirroring the admin changelist
+  querystring ([#78](https://github.com/MartinCastroAlvarez/django-admin-mcp/issues/78)).
+- **Synthetic-request attribute contract** promoted out of inline comments
+  in `dispatch.py` into `ARCHITECTURE.md` (which attributes cross the seam,
+  which are deliberately skipped, and why middleware is not re-run)
+  ([#82](https://github.com/MartinCastroAlvarez/django-admin-mcp/issues/82)).
+
 ## [1.3.0] — 2026-06-02
 
 ### Changed

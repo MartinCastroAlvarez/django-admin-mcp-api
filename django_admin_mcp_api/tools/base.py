@@ -59,7 +59,34 @@ MODEL_NAME = {
     "description": "Django model name in lower-case (e.g. 'user').",
 }
 
+# Defense-in-depth bounds (#79). ``pk`` is interpolated raw into the
+# rest-api dispatch path; an unbounded value buys nothing (the 256 KiB
+# envelope cap already bounds the worst case) but a tight ``maxLength``
+# plus a ``/``- and ``?``-excluding ``pattern`` gives clearer agent
+# errors than a downstream resolver miss, and forbids a pk that could
+# reshape the resolved path. The path is still re-validated by Django's
+# resolver in the dispatcher, so this is belt-and-suspenders.
+PK_MAX_LENGTH = 256
+# Cap the number of pks a single ``admin.action`` / ``admin.bulk_update``
+# envelope may carry (#79). The envelope byte cap bounds amplification,
+# but an explicit array cap gives an actionable INVALID_PARAMS instead
+# of forwarding an oversized batch to rest-api.
+PKS_MAX_ITEMS = 1000
+
 PK = {
     "type": "string",
+    "minLength": 1,
+    "maxLength": PK_MAX_LENGTH,
+    # Exclude path-structural characters so a pk can never reshape the
+    # rest-api dispatch path it is interpolated into.
+    "pattern": "^[^/?#]+$",
     "description": "Primary key of the model instance (always serialised as a string on the wire).",
+}
+
+# Schema fragment for a ``pks`` array shared by admin.action / admin.bulk_update.
+PK_ITEM = {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": PK_MAX_LENGTH,
+    "pattern": "^[^/?#]+$",
 }

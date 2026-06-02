@@ -78,20 +78,55 @@ django_admin_mcp_api/
 
 ## The dispatcher seam
 
-`server/dispatch.py::Dispatcher` is a `Protocol`. There are two
-implementations in this repo:
+`server/dispatch.py::Dispatcher` is a `Protocol`. There are three
+implementations:
 
-- **`PendingDispatcher`** — the default. Raises `NotImplementedError`
-  pointing at the integration issue. Lets the manifest and validation
-  layers ship today.
+- **`RestApiDispatcher`** — the live default. Resolves the target's
+  path against `django_admin_rest_api.api.urls`, builds a synthetic
+  `HttpRequest`, and calls the matched view in-process. `django-admin-rest-api`
+  is a hard runtime dependency, so a normal install always uses this.
+- **`PendingDispatcher`** — fallback used only if rest-api is not
+  importable. Every call raises `DispatcherNotInstalled` pointing at the
+  install step.
 - **`FakeDispatcher`** (in `tests/helpers.py`) — echoes the target back.
-  Used by the test suite to exercise the full wire path without
-  rest-api.
+  Used by the test suite (via the `DISPATCHER_FACTORY` setting) to
+  exercise the full wire path without rest-api.
 
-Once `django-admin-rest-api` is on PyPI we'll add `RestApiDispatcher` to
-this file. It is the *only* file that needs to change for the
-integration. Everything else — views, tools, manifest, tests — stays as
-written.
+`dispatch.py` is the *only* file that crosses the rest-api boundary.
+When rest-api ships a change, this is the only file that should need to
+move. Everything else — views, tools, manifest — stays as written.
+
+### Synthetic-request attribute contract
+
+`RestApiDispatcher` does **not** run the synthetic forward through
+Django's middleware stack — it resolves the rest-api URL conf and calls
+the matched view callable directly. It therefore copies a **deliberately
+minimal, explicit** set of attributes from the original (middleware-
+processed) request onto the synthetic one. rest-api views can rely on
+exactly these and no more:
+
+| Attribute   | Carried? | Notes                                                                 |
+| ----------- | -------- | --------------------------------------------------------------------- |
+| `user`      | ✅ always | The authenticated caller. Auth identity matches the MCP request exactly, so rest-api's per-model/per-object permission and queryset checks run against the same caller. |
+| `session`   | ✅ if set | Copied when the original request has one (`hasattr` guarded).         |
+| `COOKIES`   | ✅ always | The original cookie dict.                                             |
+| `_messages` | ✅ if set | Django's private messages backend, so rest-api views can emit admin messages. The one private-API touch. |
+
+**Deliberately NOT carried** (because middleware is skipped):
+
+- `_dont_enforce_csrf_checks` — the per-request CSRF bypass flag. CSRF is
+  verified once at the outer `McpEndpointView` POST; the in-process
+  forward does not re-run middleware, so copying this flag would only
+  carry a future bypass risk (#44).
+- Anything set by other middleware the consumer installs (locale,
+  GeoIP, custom `request.*` attributes, etc.). A rest-api view that
+  assumes a middleware-set attribute beyond the four above will **not**
+  see it across this seam and should fail loudly by contract rather than
+  silently misbehave.
+
+The original request is never mutated — the synthetic request gets its
+own attributes. This contract is the authoritative statement; the inline
+comments in `dispatch.py::_build_synthetic_request` defer to it (#82b).
 
 ## Tool ↔ rest-api endpoint mapping
 

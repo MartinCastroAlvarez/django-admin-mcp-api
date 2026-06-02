@@ -94,8 +94,27 @@ ordering, and search.
   - `page_size` (optional, integer 1–200)
   - `search` (optional, string — free-text)
   - `ordering` (optional, string — comma-separated field names; leading `-` for descending)
-  - Any other key is forwarded as a query parameter — the schema is
-    open so filter UI parameters can be passed through.
+  - Any other key is forwarded **verbatim** as a query parameter — the
+    schema is `additionalProperties: true` (the only tool that is) so
+    arbitrary `ModelAdmin.list_filter` keys can be passed through.
+
+> **Intentional open passthrough (#78).** `admin.list` mirrors the
+> Django admin changelist querystring, where the valid filter keys are
+> whatever the consumer's `ModelAdmin.list_filter` declares — an
+> open-ended, per-deployment set that the schema cannot enumerate. So
+> unlike every other tool (all `additionalProperties: false`),
+> `admin.list` deliberately forwards unknown keys verbatim to rest-api.
+>
+> The trade-off: a **typo'd filter key** (e.g. `serach=ada` instead of
+> `search=ada`) passes JSON-Schema validation and is forwarded to
+> rest-api, which ignores unrecognised query params rather than
+> erroring. The agent gets **no** json-pointer feedback for that one
+> mistake. Values are always coerced to strings, so there is no type
+> confusion, and the synthetic request's path is still re-validated by
+> Django's resolver — but **field-name typos and unintended filters
+> will not be schema-caught** on this tool. Treat the recognised keys
+> below as the documented surface; anything else is best-effort
+> changelist passthrough.
 
 ```jsonc
 { "name": "admin.list",

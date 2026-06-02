@@ -16,7 +16,7 @@ This document covers the bits the MCP layer adds on top.
 | ------------------------------------ | ------------------------------------ | ----- |
 | Django session ID + CSRF token       | The consumer's existing middleware   | Read but never logged or persisted by this package. |
 | The JSON-RPC envelope                | This package, in-memory only         | Never written to disk; never echoed in error logs. |
-| The tool catalogue (read-only)       | This package, served as JSON         | Public to any authenticated staff user; same as `tools/list`. |
+| The tool catalogue (read-only)       | This package, served as JSON         | Static; identical for every authenticated staff user; same as `tools/list`. Presence ≠ permission — see §4.1. |
 | The dispatched `DispatchTarget`      | This package, in-memory only         | Built from the tool's input schema; forwarded to rest-api. |
 | The rest-api response body           | Forwarded verbatim, in-memory only   | This package decodes JSON for the MCP envelope but does not transform. |
 
@@ -70,6 +70,40 @@ system — the exact failure mode the project rules forbid.
 | Rate limiting                                           | Consumer's middleware (e.g. `django-ratelimit`) |
 | WAF / IP allowlists                                     | Consumer's infra                               |
 | Password storage / rotation                             | Django auth + rest-api's set-password view    |
+
+### 4.1 The tool catalogue is intentionally static (not permission-filtered)
+
+`tools/list` and `GET /manifest/` return the **same** catalogue to every
+authenticated staff caller — the full registered tool set minus
+`DISABLED_TOOLS`. It is *not* filtered by the caller's per-model
+`ModelAdmin.has_*_permission`, so a staff user with no change/delete
+permission on any model still sees `admin.destroy`, `admin.set_password`,
+`admin.bulk_update`, etc. in the list (#77).
+
+This is a deliberate design choice, not a gap:
+
+- **Presence ≠ permission.** The catalogue advertises *capabilities*
+  (verbs), not *authorizations*. Listing a verb does not grant it — the
+  authoritative per-model/per-object permission check runs **per call**
+  inside rest-api, which returns the appropriate 4xx (surfaced as
+  `isError: true` content) if the caller lacks permission. No privilege
+  is conferred by catalogue membership; the worst case is information
+  disclosure of *which verbs the server exposes*, which is the same for
+  all staff and already public via the package's open-source schema.
+- **No clean per-user filter exists on the right axis.** A verb like
+  `admin.destroy` is model-generic; the per-user *model* visibility
+  question is answered by rest-api's `GET /registry/` (exposed as the
+  `admin.registry` tool), not by hiding verbs. Filtering verbs against
+  the registry would not produce a meaningful narrowing.
+- **The alternative would break the prime directive.** Narrowing the
+  catalogue any other way means re-deriving permissions inside this
+  layer (`user.has_perm`), which is explicitly forbidden — rest-api is
+  the single source of authorization. The `test_no_user_has_perm_in_package`
+  test enforces this.
+
+Agents and integrators must therefore treat `tools/list` as a static
+capability manifest, not an access-control list. See
+`api-contract.md §4.2` for the contract-level statement.
 
 If a CVE arrives in any of the rows above, file it on the right repo:
 - Admin behaviour / rest-api → file there.

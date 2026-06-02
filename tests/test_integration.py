@@ -189,7 +189,18 @@ def test_form_spec_path_a_surfaces_textarea_metadata(superuser_client):
 def test_form_spec_path_b_returns_legacy_iframe_discriminator(superuser_client):
     """Path B (query run_custom=1) — change_view renders a custom template,
     so the MCP wire forwards rest-api's ``legacy-iframe`` discriminator with
-    the legacy URL preserved. An agent surfaces this as not-driveable."""
+    the legacy URL preserved. An agent surfaces this as not-driveable.
+
+    Version coupling (#75): the ``legacy-iframe`` discriminator is emitted by
+    rest-api, not by this package — request-driven custom views were detected
+    and surfaced starting in django-admin-rest-api 1.5.0. This test therefore
+    only passes against a rest-api floor that ships that behaviour; our
+    ``pyproject.toml`` floor of ``^1.6.0`` guarantees it on a fresh install.
+    If this assertion regresses to ``form-spec``, the cause is almost always a
+    rest-api version older than 1.5.0 — not a fixture or MCP-layer bug. The
+    fixture ``JobAdmin.change_view`` (tests/test_project/jobs/admin.py) branches
+    on ``?run_custom=1`` to a hand-rolled template, which is what makes rest-api
+    classify the page as legacy/not-driveable."""
     from tests.test_project.jobs.models import Job
 
     job = Job.objects.create(name="nightly", status="idle")

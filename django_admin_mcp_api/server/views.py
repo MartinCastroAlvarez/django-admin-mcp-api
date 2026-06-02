@@ -86,6 +86,26 @@ def _auth_gate(request: HttpRequest) -> HttpResponse | None:
     return None
 
 
+def _username(request: HttpRequest) -> str | None:
+    """Best-effort username for log records; never raises."""
+    return getattr(getattr(request, "user", None), "username", None)
+
+
+def _log_method(request: HttpRequest, method: str, status: Any) -> None:
+    """Emit one structured INFO log per JSON-RPC method / manifest access.
+
+    Closes #80: discovery-side calls (``initialize``, ``tools/list``, the
+    GET landing, and GET ``/manifest/``) previously produced no forensic
+    record, so a caller could enumerate the full capability surface and
+    server metadata invisibly. We log a single ``{user, method, status}``
+    line — never the request body (could carry PII / passwords).
+    """
+    _logger.info(
+        "mcp.method",
+        extra={"user": _username(request), "method": method, "status": status},
+    )
+
+
 def _handle_jsonrpc(
     request: HttpRequest,
     payload: dict[str, Any],
@@ -98,14 +118,36 @@ def _handle_jsonrpc(
         return jsonrpc.failure(exc.request_id, exc.code, exc.message, exc.data)
 
     if rpc.method == "initialize":
-        return jsonrpc.success(rpc.id, manifest.initialize_result())
+        # #81 — read the client's requested protocolVersion and negotiate.
+        # We support exactly one version; if the client asked for a
+        # different one we log the mismatch and still return ours (the MCP
+        # client decides whether the returned version is acceptable).
+        requested = rpc.params.get("protocolVersion")
+        supported = conf.get("PROTOCOL_VERSION")
+        if isinstance(requested, str) and requested != supported:
+            _logger.info(
+                "mcp.initialize.protocol_mismatch",
+                extra={
+                    "user": _username(request),
+                    "requested": requested,
+                    "supported": supported,
+                },
+            )
+        result = manifest.initialize_result(
+            requested_protocol=requested if isinstance(requested, str) else None
+        )
+        _log_method(request, "initialize", 200)
+        return jsonrpc.success(rpc.id, result)
 
     if rpc.method == "tools/list":
-        return jsonrpc.success(rpc.id, {"tools": manifest.tools_catalogue()})
+        result = {"tools": manifest.tools_catalogue()}
+        _log_method(request, "tools/list", 200)
+        return jsonrpc.success(rpc.id, result)
 
     if rpc.method == "tools/call":
         return _handle_tools_call(request, rpc, dispatcher)
 
+    _log_method(request, rpc.method, errors.METHOD_NOT_FOUND)
     return jsonrpc.failure(rpc.id, errors.METHOD_NOT_FOUND, f"Unknown method {rpc.method!r}")
 
 
@@ -303,6 +345,7 @@ class McpEndpointView(View):
             "manifest_url": request.build_absolute_uri("manifest/"),
             "endpoint": request.build_absolute_uri(),
         }
+        _log_method(request, "GET /", 200)
         accept = request.headers.get("Accept", "")
         if "text/html" in accept and "application/json" not in accept:
             return HttpResponse(_landing_html(payload), content_type="text/html; charset=utf-8")
@@ -360,4 +403,5 @@ class ManifestView(View):
         gate = _auth_gate(request)
         if gate is not None:
             return gate
+        _log_method(request, "GET /manifest/", 200)
         return JsonResponse(manifest.manifest())
