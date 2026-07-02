@@ -52,7 +52,7 @@ jobs:
       # workflow=publish.yml, environment=pypi.
       id-token: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           # When triggered via workflow_dispatch the default ref is
           # the branch the workflow was launched from. Honour the
