@@ -50,7 +50,11 @@ jobs:
       - name: Install dependencies
         run: poetry install --no-interaction --no-root
       - name: pip-audit
-        run: poetry run pip-audit
+        run: |
+          # Upgrade pip first so its own advisory (PYSEC-2026-196, fixed in
+          # 26.1.2) doesn't fail the audit — pip is tooling, not a shipped dep.
+          poetry run python -m pip install --upgrade -q pip
+          poetry run pip-audit
 
   test:
     name: Tests (Python ${{ matrix.python-version }} / Django ${{ matrix.django }})
