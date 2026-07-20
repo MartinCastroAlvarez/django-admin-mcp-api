@@ -58,7 +58,7 @@ jobs:
           # the branch the workflow was launched from. Honour the
           # input so a manual re-trigger lands on the right tag.
           ref: ${{ github.event.inputs.ref || github.ref }}
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
